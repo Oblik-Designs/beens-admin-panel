@@ -22,6 +22,13 @@ export interface Ticket {
   closedAt?: string
   createdAt: string
   updatedAt: string
+  attachments: {
+    _id: string
+    filename: string
+    url: string
+    mimeType: string
+    size: number
+  }[]
 }
 
 export interface TicketReportedTargetUser {
@@ -48,7 +55,6 @@ export interface TicketStatusHistoryEntry {
 }
 
 export interface TicketDetail extends Ticket {
-  attachments: {}[]
   reportedTargets: TicketReportedTarget[]
   messages: {}[]
   assignmentHistory: {}[]
