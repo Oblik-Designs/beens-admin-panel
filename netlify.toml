@@ -2,3 +2,8 @@
     base = "."
     command = "vite build"
     publish = "dist"
+
+[build.environment]
+    # Tell Netlify to ignore VITE_NODE_ENV in secrets scanning
+    # It's not a secret, just an environment indicator
+    SECRETS_SCAN_OMIT_KEYS = "VITE_NODE_ENV"
