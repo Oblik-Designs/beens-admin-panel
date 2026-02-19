@@ -3,7 +3,12 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
-import { ChevronDownIcon, SlidersHorizontalIcon, UserIcon } from 'lucide-react'
+import {
+  CheckCircle2Icon,
+  ChevronDownIcon,
+  SlidersHorizontalIcon,
+  UserIcon,
+} from 'lucide-react'
 
 import {
   Combobox,
@@ -32,6 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { TicketActionSheet } from '@/components/ticket-action-sheet'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { TicketsTable } from '@/components/tickets-table'
 import { searchTicketsOptions } from '@/queries/tickets'
 import type { Ticket } from '@/server/api/tickets'
@@ -89,6 +95,7 @@ function TicketsPage() {
   const [selectedTicket, setSelectedTicket] = React.useState<Ticket | null>(
     null,
   )
+  const [successMessage, setSuccessMessage] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     setSelectedReporterId(search.reporter ?? '')
@@ -225,6 +232,8 @@ function TicketsPage() {
     setActionSheetOpen(open)
     if (!open) setSelectedTicket(null)
   }, [])
+
+  console.log('tickets: ', tickets)
 
   return (
     <SidebarProvider
@@ -403,6 +412,29 @@ function TicketsPage() {
                 </div>
               </div>
 
+              {successMessage && (
+                <div className="px-4 pb-2 lg:px-6">
+                  <Alert variant="success" className="relative">
+                    <CheckCircle2Icon className="size-4" />
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <AlertTitle>Action completed</AlertTitle>
+                        <AlertDescription>{successMessage}</AlertDescription>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="-mr-2 -mt-1"
+                        onClick={() => setSuccessMessage(null)}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  </Alert>
+                </div>
+              )}
+
               {!isLoading && (
                 <>
                   <TicketsTable
@@ -419,6 +451,7 @@ function TicketsPage() {
                     open={actionSheetOpen}
                     onOpenChange={handleActionSheetOpenChange}
                     ticket={selectedTicket}
+                    onActionSuccess={(message) => setSuccessMessage(message)}
                   />
                 </>
               )}

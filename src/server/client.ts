@@ -18,7 +18,7 @@ const getAuthHeaders = async (
   headers.set('Content-Type', 'application/json')
 
   if (accessToken) {
-    headers.set('Authorization', `Bearer ${accessToken}`)
+    headers.set('authorization', `Bearer ${accessToken}`)
   }
 
   return headers
@@ -126,12 +126,17 @@ const executeRequest = async <T>(
   options?: RequestInit,
 ): Promise<T> => {
   const headers = await getAuthHeaders(options?.headers)
+  console.log('headers: ', headers)
   const response = await fetch(buildUrl(endpoint), {
     ...options,
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
   })
+
+  console.log('data: ', data)
+
+  console.log('response: ', response)
 
   if (!response.ok) {
     if (isTokenExpired(response.status)) {

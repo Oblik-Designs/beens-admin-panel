@@ -32,7 +32,11 @@ const formatDateTime = (value?: string) => {
   return format(date, 'MMM dd yyyy, hh:mm a')
 }
 
-const getFullName = (user?: { firstName: string; lastName: string; displayName: string }) => {
+const getFullName = (user?: {
+  firstName: string
+  lastName: string
+  displayName: string
+}) => {
   if (!user) return 'Unknown'
   return (
     user.displayName ||
@@ -70,7 +74,7 @@ export const ticketColumns: ColumnDef<Ticket>[] = [
       const name = getFullName(assignee)
 
       return (
-        <div className="flex items-center gap-2 px-4 py-1">
+        <div className="flex items-center gap-2 py-1">
           <Avatar className="size-7">
             <AvatarImage src={assignee?.profileImage} alt={name} />
             <AvatarFallback className="text-muted-foreground bg-transparent border">
@@ -105,8 +109,10 @@ export const ticketColumns: ColumnDef<Ticket>[] = [
     cell: ({ row }) => {
       const priority = row.original.priority?.toUpperCase() ?? ''
       const priorityStyles: Record<string, string> = {
-        URGENT: 'border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-950/50 dark:text-red-400',
-        NORMAL: 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/50 dark:text-blue-400',
+        URGENT:
+          'border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-950/50 dark:text-red-400',
+        NORMAL:
+          'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-950/50 dark:text-blue-400',
         LOW: 'border-green-300 bg-green-50 text-green-700 dark:border-green-700 dark:bg-green-950/50 dark:text-green-400',
         HIGH: 'border-yellow-300 bg-yellow-50 text-yellow-700 dark:border-yellow-700 dark:bg-yellow-950/50 dark:text-yellow-400',
       }
@@ -124,8 +130,9 @@ export const ticketColumns: ColumnDef<Ticket>[] = [
     id: 'reason',
     header: 'Reason',
     cell: ({ row }) => {
-      const reportedTargets = (row.original as { reportedTargets?: { reason: string }[] })
-        ?.reportedTargets
+      const reportedTargets = (
+        row.original as { reportedTargets?: { reason: string }[] }
+      )?.reportedTargets
       const reason =
         reportedTargets
           ?.map((t) => formatLabel(t.reason))
@@ -195,4 +202,3 @@ export const ticketColumns: ColumnDef<Ticket>[] = [
     },
   },
 ]
-

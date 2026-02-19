@@ -84,6 +84,16 @@ export interface TicketPlanResolveParams {
   refundAmount?: number
 }
 
+export interface TicketUserResolveParams {
+  ticketId: string
+  action: string
+  escalationReason?: string
+  disabledUntil?: string
+  newKYCStatus?: string
+  newLevelId?: string
+  description?: string
+}
+
 export interface TicketResolution {
   action: string
   description: string
@@ -97,6 +107,11 @@ export interface TicketPlanResolveData extends Ticket {
 }
 
 export interface TicketPlanResolveResponse {
+  success: boolean
+  data: TicketPlanResolveData
+}
+
+export interface TicketUserResolveResponse {
   success: boolean
   data: TicketPlanResolveData
 }
@@ -188,5 +203,21 @@ export const resolvePlanReportTicket = createServerFn({
     '/tickets/plan/resolve',
     data,
   )
+  console.log('resolvePlanReportTicket result: ', result)
+  return result
+})
+
+export const resolveUserReportTicket = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const data = ctx.data as TicketUserResolveParams | undefined
+  if (!data?.ticketId) {
+    throw new Error('ticketId is required')
+  }
+  const result = await apiClient.post<TicketUserResolveResponse>(
+    '/tickets/user/resolve',
+    data,
+  )
+  console.log('resolveUserReportTicket result: ', result)
   return result
 })
