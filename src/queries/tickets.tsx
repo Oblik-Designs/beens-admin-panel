@@ -3,10 +3,12 @@ import {
   closeTicket,
   getTicketById,
   resolvePlanReportTicket,
+  resolveUserReportTicket,
   searchTickets,
   type TicketCloseParams,
   type TicketPlanResolveParams,
   type TicketSearchParams,
+  type TicketUserResolveParams,
 } from '@/server/api/tickets'
 
 export const searchTicketsOptions = (params?: TicketSearchParams) =>
@@ -41,5 +43,13 @@ export const resolvePlanReportTicketOptions = mutationOptions({
   mutationFn: async (params: TicketPlanResolveParams) => {
     // @ts-expect-error - createServerFn types don't properly reflect POST data parameter
     return await resolvePlanReportTicket({ data: params })
+  },
+})
+
+export const resolveUserReportTicketOptions = mutationOptions({
+  mutationKey: ['tickets', 'user', 'resolve'],
+  mutationFn: async (params: TicketUserResolveParams) => {
+    // @ts-expect-error - createServerFn types don't properly reflect POST data parameter
+    return await resolveUserReportTicket({ data: params })
   },
 })

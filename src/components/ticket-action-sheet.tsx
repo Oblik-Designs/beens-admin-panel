@@ -21,6 +21,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   closeTicketOptions,
   resolvePlanReportTicketOptions,
+  resolveUserReportTicketOptions,
 } from '@/queries/tickets'
 import type { Ticket } from '@/server/api/tickets'
 import {
@@ -44,11 +45,13 @@ function getReporterName(reporter: Ticket['reporter']) {
 
 function formatDateTime(value?: string) {
   if (!value) return '-'
+  console.log('value: ', value)
 
   let date: Date
 
   try {
     date = parseISO(value)
+    console.log('date: ', date)
     if (Number.isNaN(date.getTime())) {
       throw new Error('Invalid ISO date')
     }
@@ -65,14 +68,16 @@ type TicketActionSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   ticket: Ticket | null
+  onActionSuccess?: (message: string) => void
 }
 
-type ActionTab = 'remove-plan' | 'close' | 'refund'
+type ActionTab = 'remove-plan' | 'close' | 'refund' | 'ban-user' | 'warn-user'
 
 export function TicketActionSheet({
   open,
   onOpenChange,
   ticket,
+  onActionSuccess,
 }: TicketActionSheetProps) {
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = React.useState<ActionTab>('remove-plan')
@@ -85,6 +90,7 @@ export function TicketActionSheet({
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
       onOpenChange(false)
       setRemovePlanMessage('')
+      onActionSuccess?.('Plan removed successfully.')
     },
   })
 
@@ -96,6 +102,7 @@ export function TicketActionSheet({
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
       onOpenChange(false)
       setCloseMessage('')
+      onActionSuccess?.('Ticket closed successfully.')
     },
   })
 
@@ -113,6 +120,37 @@ export function TicketActionSheet({
       setRefundType('Partial Refund')
       setRefundAmount('')
       setRefundMessage('')
+      onActionSuccess?.('Refund submitted successfully.')
+    },
+    onError: (error) => {
+      console.error('Error resolving plan report: ', error)
+    },
+  })
+
+  // User report (ban / warn)
+  const [banUntil, setBanUntil] = React.useState('')
+  const [banMessage, setBanMessage] = React.useState('')
+  const [warnMessage, setWarnMessage] = React.useState('')
+
+  const userResolveMutation = useMutation({
+    ...resolveUserReportTicketOptions,
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      onOpenChange(false)
+      setBanUntil('')
+      setBanMessage('')
+      setWarnMessage('')
+      const action = (variables as any)?.action
+      if (action === 'BAN' || action === 'SUSPENSION') {
+        onActionSuccess?.('User banned successfully.')
+      } else if (action === 'WARNING') {
+        onActionSuccess?.('User warned successfully.')
+      } else {
+        onActionSuccess?.('User report resolved successfully.')
+      }
+    },
+    onError: (error) => {
+      console.error('Error resolving user report: ', error)
     },
   })
 
@@ -122,7 +160,7 @@ export function TicketActionSheet({
     removePlanMutation.mutate({
       ticketId: ticket._id,
       action: 'SUSPENSION',
-      description: removePlanMessage.trim(),
+      escalationReason: removePlanMessage.trim(),
     })
   }
 
@@ -144,15 +182,41 @@ export function TicketActionSheet({
     refundMutation.mutate({
       ticketId: ticket._id,
       action: isPartial ? 'PARTIAL_REFUND' : 'REFUND',
-      description: refundMessage.trim(),
+      escalationReason: refundMessage.trim(),
       refundAmount: amount,
+    })
+  }
+
+  const handleBanUser = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!ticket?._id || !banUntil || !banMessage.trim()) return
+    const disabledUntil = new Date(banUntil).toISOString()
+    console.log('disabledUntil: ', disabledUntil)
+    userResolveMutation.mutate({
+      ticketId: ticket._id,
+      action: 'BAN',
+      disabledUntil: disabledUntil,
+      escalationReason: banMessage.trim(),
+    })
+  }
+
+  const handleWarnUser = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!ticket?._id || !warnMessage.trim()) return
+    userResolveMutation.mutate({
+      ticketId: ticket._id,
+      action: 'WARNING',
+      escalationReason: warnMessage.trim(),
     })
   }
 
   const isPending =
     removePlanMutation.isPending ||
     closeMutation.isPending ||
-    refundMutation.isPending
+    refundMutation.isPending ||
+    userResolveMutation.isPending
+
+  const isPlanReport = ticket?.type === 'REPORT_PLAN'
 
   return (
     <DetailSheet
@@ -224,169 +288,329 @@ export function TicketActionSheet({
               className="w-full min-h-70"
             >
               <TabsList className="bg-muted/50 grid w-full grid-cols-3 gap-1 p-1">
-                <TabsTrigger value="remove-plan" className="gap-1.5 text-xs">
-                  <BanIcon className="size-3.5" />
-                  Remove Plan
-                </TabsTrigger>
-                <TabsTrigger value="close" className="gap-1.5 text-xs">
-                  <CircleXIcon className="size-3.5" />
-                  Close
-                </TabsTrigger>
-                <TabsTrigger value="refund" className="gap-1.5 text-xs">
-                  <ReceiptCentIcon className="size-3.5" />
-                  Refund
-                </TabsTrigger>
+                {isPlanReport ? (
+                  <>
+                    <TabsTrigger
+                      value="remove-plan"
+                      className="gap-1.5 text-xs"
+                    >
+                      <BanIcon className="size-3.5" />
+                      Remove Plan
+                    </TabsTrigger>
+                    <TabsTrigger value="close" className="gap-1.5 text-xs">
+                      <CircleXIcon className="size-3.5" />
+                      Close Ticket
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="refund"
+                      className="gap-1.5 text-xs"
+                      disabled={true}
+                    >
+                      <ReceiptCentIcon className="size-3.5" />
+                      Refund User
+                    </TabsTrigger>
+                  </>
+                ) : (
+                  <>
+                    <TabsTrigger value="ban-user" className="gap-1.5 text-xs">
+                      <BanIcon className="size-3.5" />
+                      Ban User
+                    </TabsTrigger>
+                    <TabsTrigger value="warn-user" className="gap-1.5 text-xs">
+                      <CircleXIcon className="size-3.5" />
+                      Warn User
+                    </TabsTrigger>
+                    <TabsTrigger value="close" className="gap-1.5 text-xs">
+                      <CircleXIcon className="size-3.5" />
+                      Close Ticket
+                    </TabsTrigger>
+                  </>
+                )}
               </TabsList>
 
-              <TabsContent
-                value="remove-plan"
-                className="mt-4 focus-visible:outline-none"
-              >
-                <form
-                  onSubmit={handleRemovePlan}
-                  className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-4"
-                >
-                  <p className="text-muted-foreground text-xs leading-relaxed">
-                    Remove the reported plan and add a reason for the removal.
-                  </p>
-                  <div className="space-y-2">
-                    <Label htmlFor="remove-plan-message">
-                      Why are you removing the plan?
-                    </Label>
-                    <Textarea
-                      id="remove-plan-message"
-                      placeholder="e.g. Violation of community guidelines..."
-                      value={removePlanMessage}
-                      onChange={(e) => setRemovePlanMessage(e.target.value)}
-                      rows={4}
-                      required
-                      disabled={isPending}
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={!removePlanMessage.trim() || isPending}
+              {isPlanReport ? (
+                <>
+                  <TabsContent
+                    value="remove-plan"
+                    className="mt-4 focus-visible:outline-none"
                   >
-                    {removePlanMutation.isPending
-                      ? 'Removing...'
-                      : 'Remove plan'}
-                  </Button>
-                </form>
-              </TabsContent>
-
-              <TabsContent
-                value="close"
-                className="mt-4 focus-visible:outline-none"
-              >
-                <form
-                  onSubmit={handleCloseTicket}
-                  className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-4"
-                >
-                  <p className="text-muted-foreground text-xs leading-relaxed">
-                    Close this ticket without taking action on the plan.
-                  </p>
-                  <div className="space-y-2">
-                    <Label htmlFor="close-message">
-                      Why are you closing without action?
-                    </Label>
-                    <Textarea
-                      id="close-message"
-                      placeholder="e.g. Report was not valid..."
-                      value={closeMessage}
-                      onChange={(e) => setCloseMessage(e.target.value)}
-                      rows={4}
-                      required
-                      disabled={isPending}
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={!closeMessage.trim() || isPending}
-                  >
-                    {closeMutation.isPending ? 'Closing...' : 'Close ticket'}
-                  </Button>
-                </form>
-              </TabsContent>
-
-              <TabsContent
-                value="refund"
-                className="mt-4 focus-visible:outline-none"
-              >
-                <form
-                  onSubmit={handleRefundReporter}
-                  className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-4"
-                >
-                  <p className="text-muted-foreground text-xs leading-relaxed">
-                    Refund the reporter and add a note for the resolution.
-                  </p>
-                  <div className="space-y-2">
-                    <Label>Refund type</Label>
-                    <Select
-                      value={refundType}
-                      onValueChange={(v) =>
-                        setRefundType(v as 'Partial Refund' | 'Full Refund')
-                      }
-                      disabled={isPending}
+                    <form
+                      onSubmit={handleRemovePlan}
+                      className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-4"
                     >
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select refund type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Partial Refund">
-                          Partial refund
-                        </SelectItem>
-                        <SelectItem value="Full Refund">Full refund</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="refund-amount">
-                      Refund amount (required)
-                    </Label>
-                    <Input
-                      id="refund-amount"
-                      type="number"
-                      min={0}
-                      step={1}
-                      placeholder="e.g. 500"
-                      value={refundAmount}
-                      onChange={(e) => setRefundAmount(e.target.value)}
-                      disabled={isPending}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="refund-message">
-                      Explain why (required)
-                    </Label>
-                    <Textarea
-                      id="refund-message"
-                      placeholder="e.g. Refunding due to plan cancellation..."
-                      value={refundMessage}
-                      onChange={(e) => setRefundMessage(e.target.value)}
-                      rows={4}
-                      required
-                      disabled={isPending}
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={
-                      !refundMessage.trim() ||
-                      isPending ||
-                      !refundAmount.trim() ||
-                      Number.isNaN(Number(refundAmount)) ||
-                      Number(refundAmount) <= 0
-                    }
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Remove the reported plan and add a reason for the
+                        removal.
+                      </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="remove-plan-message">
+                          Why are you removing the plan?
+                        </Label>
+                        <Textarea
+                          id="remove-plan-message"
+                          placeholder="e.g. Violation of community guidelines..."
+                          value={removePlanMessage}
+                          onChange={(e) => setRemovePlanMessage(e.target.value)}
+                          rows={4}
+                          required
+                          disabled={isPending}
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={!removePlanMessage.trim() || isPending}
+                      >
+                        {removePlanMutation.isPending
+                          ? 'Removing...'
+                          : 'Remove plan'}
+                      </Button>
+                    </form>
+                  </TabsContent>
+
+                  <TabsContent
+                    value="close"
+                    className="mt-4 focus-visible:outline-none"
                   >
-                    {refundMutation.isPending
-                      ? 'Submitting...'
-                      : 'Refund reporter'}
-                  </Button>
-                </form>
-              </TabsContent>
+                    <form
+                      onSubmit={handleCloseTicket}
+                      className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-4"
+                    >
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Close this ticket without taking action on the plan.
+                      </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="close-message">
+                          Why are you closing without action?
+                        </Label>
+                        <Textarea
+                          id="close-message"
+                          placeholder="e.g. Report was not valid..."
+                          value={closeMessage}
+                          onChange={(e) => setCloseMessage(e.target.value)}
+                          rows={4}
+                          required
+                          disabled={isPending}
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={!closeMessage.trim() || isPending}
+                      >
+                        {closeMutation.isPending
+                          ? 'Closing...'
+                          : 'Close ticket'}
+                      </Button>
+                    </form>
+                  </TabsContent>
+
+                  {/* <TabsContent
+                    value="refund"
+                    className="mt-4 focus-visible:outline-none"
+                  >
+                    <form
+                      onSubmit={handleRefundReporter}
+                      className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-4"
+                    >
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Refund the reporter and add a note for the resolution.
+                      </p>
+                      <div className="space-y-2">
+                        <Label>Refund type</Label>
+                        <Select
+                          value={refundType}
+                          onValueChange={(v) =>
+                            setRefundType(v as 'Partial Refund' | 'Full Refund')
+                          }
+                          disabled={isPending}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Select refund type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Partial Refund">
+                              Partial refund
+                            </SelectItem>
+                            <SelectItem value="Full Refund">
+                              Full refund
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="refund-amount">
+                          Refund amount (required)
+                        </Label>
+                        <Input
+                          id="refund-amount"
+                          type="number"
+                          min={0}
+                          step={1}
+                          placeholder="e.g. 500"
+                          value={refundAmount}
+                          onChange={(e) => setRefundAmount(e.target.value)}
+                          disabled={isPending}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="refund-message">
+                          Explain why (required)
+                        </Label>
+                        <Textarea
+                          id="refund-message"
+                          placeholder="e.g. Refunding due to plan cancellation..."
+                          value={refundMessage}
+                          onChange={(e) => setRefundMessage(e.target.value)}
+                          rows={4}
+                          required
+                          disabled={isPending}
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        // disabled={
+                        //   !refundMessage.trim() ||
+                        //   isPending ||
+                        //   !refundAmount.trim() ||
+                        //   Number.isNaN(Number(refundAmount)) ||
+                        //   Number(refundAmount) <= 0
+                        // }
+                        disabled={true}
+                      >
+                        {refundMutation.isPending
+                          ? 'Submitting...'
+                          : 'Refund reporter'}
+                      </Button>
+                    </form>
+                  </TabsContent> */}
+                </>
+              ) : (
+                <>
+                  <TabsContent
+                    value="ban-user"
+                    className="mt-4 focus-visible:outline-none"
+                  >
+                    <form
+                      onSubmit={handleBanUser}
+                      className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-4"
+                    >
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Ban the user until a specific date and add a reason for
+                        the ban.
+                      </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="ban-until">Ban until (deadline)</Label>
+                        <Input
+                          id="ban-until"
+                          type="datetime-local"
+                          value={banUntil}
+                          onChange={(e) => setBanUntil(e.target.value)}
+                          disabled={isPending}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ban-message">
+                          Why are you banning the user?
+                        </Label>
+                        <Textarea
+                          id="ban-message"
+                          placeholder="e.g. Repeated violation of community guidelines..."
+                          value={banMessage}
+                          onChange={(e) => setBanMessage(e.target.value)}
+                          rows={4}
+                          required
+                          disabled={isPending}
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={!banUntil || !banMessage.trim() || isPending}
+                      >
+                        {userResolveMutation.isPending
+                          ? 'Banning...'
+                          : 'Ban user'}
+                      </Button>
+                    </form>
+                  </TabsContent>
+
+                  <TabsContent
+                    value="warn-user"
+                    className="mt-4 focus-visible:outline-none"
+                  >
+                    <form
+                      onSubmit={handleWarnUser}
+                      className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-4"
+                    >
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Send a warning to the user and explain why.
+                      </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="warn-message">
+                          Why are you warning the user?
+                        </Label>
+                        <Textarea
+                          id="warn-message"
+                          placeholder="e.g. Violation of community guidelines..."
+                          value={warnMessage}
+                          onChange={(e) => setWarnMessage(e.target.value)}
+                          rows={4}
+                          required
+                          disabled={isPending}
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={!warnMessage.trim() || isPending}
+                      >
+                        {userResolveMutation.isPending
+                          ? 'Sending warning...'
+                          : 'Warn user'}
+                      </Button>
+                    </form>
+                  </TabsContent>
+
+                  <TabsContent
+                    value="close"
+                    className="mt-4 focus-visible:outline-none"
+                  >
+                    <form
+                      onSubmit={handleCloseTicket}
+                      className="rounded-lg border border-border/60 bg-muted/30 p-4 space-y-4"
+                    >
+                      <p className="text-muted-foreground text-xs leading-relaxed">
+                        Close this ticket without taking action on the user.
+                      </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="close-message">
+                          Why are you closing without action?
+                        </Label>
+                        <Textarea
+                          id="close-message"
+                          placeholder="e.g. Report was not valid..."
+                          value={closeMessage}
+                          onChange={(e) => setCloseMessage(e.target.value)}
+                          rows={4}
+                          required
+                          disabled={isPending}
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={!closeMessage.trim() || isPending}
+                      >
+                        {closeMutation.isPending
+                          ? 'Closing...'
+                          : 'Close ticket'}
+                      </Button>
+                    </form>
+                  </TabsContent>
+                </>
+              )}
             </Tabs>
           </>
         )}
