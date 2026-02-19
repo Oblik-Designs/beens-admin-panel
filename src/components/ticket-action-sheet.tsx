@@ -301,7 +301,11 @@ export function TicketActionSheet({
                       <CircleXIcon className="size-3.5" />
                       Close Ticket
                     </TabsTrigger>
-                    <TabsTrigger value="refund" className="gap-1.5 text-xs">
+                    <TabsTrigger
+                      value="refund"
+                      className="gap-1.5 text-xs"
+                      disabled={true}
+                    >
                       <ReceiptCentIcon className="size-3.5" />
                       Refund User
                     </TabsTrigger>
@@ -401,7 +405,7 @@ export function TicketActionSheet({
                     </form>
                   </TabsContent>
 
-                  <TabsContent
+                  {/* <TabsContent
                     value="refund"
                     className="mt-4 focus-visible:outline-none"
                   >
@@ -466,20 +470,21 @@ export function TicketActionSheet({
                       <Button
                         type="submit"
                         size="sm"
-                        disabled={
-                          !refundMessage.trim() ||
-                          isPending ||
-                          !refundAmount.trim() ||
-                          Number.isNaN(Number(refundAmount)) ||
-                          Number(refundAmount) <= 0
-                        }
+                        // disabled={
+                        //   !refundMessage.trim() ||
+                        //   isPending ||
+                        //   !refundAmount.trim() ||
+                        //   Number.isNaN(Number(refundAmount)) ||
+                        //   Number(refundAmount) <= 0
+                        // }
+                        disabled={true}
                       >
                         {refundMutation.isPending
                           ? 'Submitting...'
                           : 'Refund reporter'}
                       </Button>
                     </form>
-                  </TabsContent>
+                  </TabsContent> */}
                 </>
               ) : (
                 <>
