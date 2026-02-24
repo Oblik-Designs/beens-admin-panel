@@ -36,7 +36,7 @@ export interface Plan {
   type: string
   privacy: string
   creator: PlanCreator
-  cohosts: any[]
+  cohosts: Array<any>
   status: string
   location: PlanLocation
   startDate: string
@@ -45,10 +45,10 @@ export interface Plan {
   endTime: string
   duration: number
   maxParticipants: number
-  currentParticipants: string[]
+  currentParticipants: Array<string>
   budget: PlanBudget
   primaryImage: string
-  tags: string[]
+  tags: Array<string>
   views: number
   createdAt: string
   isFull: boolean
@@ -88,7 +88,7 @@ export interface PlanSearchParams {
 export interface PlanSearchResponse {
   success: boolean
   data: {
-    plans: Plan[]
+    plans: Array<Plan>
     pagination: PlanSearchPagination
   }
 }
@@ -98,11 +98,27 @@ export interface PlanDeleteResponse {
   data: Plan
 }
 
+export interface PlanByIdResponse {
+  success: boolean
+  data: any
+}
+
 export const searchPlans = createServerFn({
   method: 'POST',
 }).handler(async (ctx) => {
   const data = ctx.data as PlanSearchParams | undefined
   const result = await apiClient.post<PlanSearchResponse>('/plan/search', data)
   console.log(result)
+  return result
+})
+
+export const getPlanById = createServerFn({
+  method: 'GET',
+}).handler(async (ctx) => {
+  const { planId } = (ctx.data ?? {}) as { planId?: string }
+  if (!planId) {
+    throw new Error('Plan ID is required')
+  }
+  const result = await apiClient.get<PlanByIdResponse>(`/plan/${planId}`)
   return result
 })

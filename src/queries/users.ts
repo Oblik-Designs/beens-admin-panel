@@ -4,6 +4,7 @@ import {
   getUserById,
   searchUsers,
   updateUser,
+  deleteUser,
   type UserSearchParams,
   type UserUpdatePayload,
 } from '@/server/api/users'
@@ -44,5 +45,15 @@ export const updateUserOptions = (id: string) => ({
   ): Promise<UpdateUserResult> => {
     // @ts-expect-error - createServerFn types don't properly reflect data parameter
     return await updateUser({ data: { id, ...variables } })
+  },
+})
+
+type DeleteUserResult = { success: boolean; data: any }
+
+export const deleteUserOptions = (id: string) => ({
+  mutationKey: ['users', 'delete', id],
+  mutationFn: async (): Promise<DeleteUserResult> => {
+    // @ts-expect-error - createServerFn types don't properly reflect data parameter
+    return await deleteUser({ data: id })
   },
 })

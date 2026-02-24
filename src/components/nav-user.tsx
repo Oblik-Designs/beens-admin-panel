@@ -16,11 +16,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { logoutOptions } from '@/queries/auth'
-import {
-  EllipsisVerticalIcon,
-  LogOutIcon,
-  UserIcon,
-} from 'lucide-react'
+import { EllipsisVerticalIcon, LogOutIcon, UserIcon } from 'lucide-react'
 
 export function NavUser({
   user,
@@ -52,7 +48,10 @@ export function NavUser({
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
+              <SidebarMenuButton
+                size="lg"
+                className="aria-expanded:bg-muted cursor-pointer"
+              />
             }
           >
             <Avatar className="size-8 rounded-lg grayscale">

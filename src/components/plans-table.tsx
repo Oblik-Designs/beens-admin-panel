@@ -1,14 +1,15 @@
 import * as React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
+import { CalendarIcon, MapPinIcon, UserIcon } from 'lucide-react'
 
-import { planColumns } from '@/constants/planDataColumns'
 import type { Plan } from '@/server/api/plans'
+import { planColumns } from '@/constants/planDataColumns'
 import { DetailSheet } from '@/components/detail-sheet'
 import { TableWithPagination } from '@/components/table-with-pagination'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getUserByIdOptions } from '@/queries/users'
-import { UserIcon } from 'lucide-react'
+import { getPlanByIdOptions } from '@/queries/plans'
 
 type UserDetail = {
   _id?: string
@@ -55,7 +56,7 @@ const formatAddress = (address?: UserDetail['address']) => {
 }
 
 type PlansTableProps = {
-  data: Plan[]
+  data: Array<Plan>
   pageIndex: number
   pageSize: number
   pageCount: number
@@ -78,6 +79,11 @@ export function PlansTable({
     string | null
   >(null)
 
+  const [planSheetOpen, setPlanSheetOpen] = React.useState(false)
+  const [selectedPlanId, setSelectedPlanId] = React.useState<string | null>(
+    null,
+  )
+
   const { data: userResponse, isLoading: isUserLoading } = useQuery({
     ...getUserByIdOptions(selectedCreatorId),
     enabled: sheetOpen && !!selectedCreatorId,
@@ -86,6 +92,13 @@ export function PlansTable({
   const user = (userResponse?.data as UserDetail | undefined) ?? null
 
   console.log('User Data: ', user)
+
+  const { data: planResponse, isLoading: isPlanLoading } = useQuery({
+    ...getPlanByIdOptions(selectedPlanId ?? ''),
+    enabled: !!selectedPlanId,
+  })
+
+  const plan = (planResponse?.data ?? null) as any
 
   const handleCreatorClick = React.useCallback((userId: string) => {
     setSelectedCreatorId(userId)
@@ -96,6 +109,18 @@ export function PlansTable({
     setSheetOpen(open)
     if (!open) {
       setSelectedCreatorId(null)
+    }
+  }, [])
+
+  const handleViewPlan = React.useCallback((planId: string) => {
+    setSelectedPlanId(planId)
+    setPlanSheetOpen(true)
+  }, [])
+
+  const handlePlanSheetOpenChange = React.useCallback((open: boolean) => {
+    setPlanSheetOpen(open)
+    if (!open) {
+      setSelectedPlanId(null)
     }
   }, [])
 
@@ -115,7 +140,10 @@ export function PlansTable({
         pageCount={pageCount}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
-        meta={{ onCreatorClick: handleCreatorClick }}
+        meta={{
+          onCreatorClick: handleCreatorClick,
+          onViewPlan: handleViewPlan,
+        }}
         emptyMessage="No plans found."
         loadingMessage="Loading plans data..."
         isLoading={isLoading}
@@ -205,6 +233,156 @@ export function PlansTable({
                 <span className="truncate font-medium">
                   {formatDate(user.subscriptionEnd)}
                 </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </DetailSheet>
+
+      <DetailSheet
+        open={planSheetOpen}
+        onOpenChange={handlePlanSheetOpenChange}
+        title="Plan details"
+        description="View full information about this plan."
+      >
+        {!plan && isPlanLoading && (
+          <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+            Loading plan details...
+          </div>
+        )}
+        {!isPlanLoading && !plan && (
+          <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+            No plan details found.
+          </div>
+        )}
+        {!isPlanLoading && plan && (
+          <div className="space-y-6">
+            <div className="flex items-start gap-3">
+              <Avatar className="size-12">
+                <AvatarImage
+                  src={plan.creator?.profileImage}
+                  alt={
+                    plan.creator?.displayName ??
+                    `${plan.creator?.firstName ?? ''} ${
+                      plan.creator?.lastName ?? ''
+                    }`.trim() ??
+                    'Creator'
+                  }
+                />
+                <AvatarFallback className="text-muted-foreground border">
+                  <UserIcon className="size-6" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-1">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Creator
+                </div>
+                <div className="font-medium text-sm">
+                  {plan.creator?.displayName ||
+                    `${plan.creator?.firstName ?? ''} ${
+                      plan.creator?.lastName ?? ''
+                    }`.trim() ||
+                    'Unknown'}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-lg border bg-muted/40 px-4 py-3">
+              {Array.isArray(plan.images) && plan.images.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {plan.images
+                      .filter((url: string | undefined) => !!url)
+                      .map((url: string) => (
+                        <img
+                          key={url}
+                          src={url}
+                          alt={plan.title ?? 'Plan image'}
+                          className="h-20 w-28 shrink-0 rounded-md object-cover"
+                        />
+                      ))}
+                  </div>
+                </div>
+              )}
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                Plan
+              </div>
+              <div className="space-y-1">
+                <div className="font-semibold text-sm">{plan.title}</div>
+                {plan.description && (
+                  <p className="text-sm text-muted-foreground">
+                    {plan.description}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-lg border bg-muted/40 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                Location & schedule
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-2">
+                  <MapPinIcon className="size-3 text-muted-foreground mt-1" />
+                  <span>
+                    {[
+                      plan.location?.address,
+                      plan.location?.city,
+                      plan.location?.state,
+                      plan.location?.country,
+                      plan.location?.zipCode,
+                    ]
+                      .filter(Boolean)
+                      .join(', ') || '-'}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon className="size-3 text-muted-foreground" />
+                    <span className="text-xs">
+                      Start:{' '}
+                      {formatDate(plan.startDate) ?? plan.startDate ?? '-'}{' '}
+                      {plan.startTime ? `at ${plan.startTime}` : ''}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon className="size-3 text-muted-foreground" />
+                    <span className="text-xs">
+                      End: {formatDate(plan.endDate) ?? plan.endDate ?? '-'}{' '}
+                      {plan.endTime ? `at ${plan.endTime}` : ''}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-lg border bg-muted/40 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                Overview
+              </div>
+              <div className="space-y-1 text-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">Type</span>
+                  <span className="font-medium">{plan.type ?? '-'}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">Privacy</span>
+                  <span className="font-medium">{plan.privacy ?? '-'}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">Status</span>
+                  <span className="font-medium">{plan.status ?? '-'}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">Budget</span>
+                  <span className="font-medium">
+                    {plan.budget?.amount
+                      ? `${plan.budget.amount} ${
+                          plan.budget.currency?.toUpperCase() ?? ''
+                        }`
+                      : '-'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

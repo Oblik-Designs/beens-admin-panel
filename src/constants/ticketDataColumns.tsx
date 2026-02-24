@@ -1,15 +1,9 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { formatLabel } from '@/lib/utils'
 import type { ColumnDef } from '@tanstack/react-table'
-import { CalendarIcon, EllipsisVerticalIcon, UserIcon } from 'lucide-react'
+import { CalendarIcon, UserIcon } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import type { Ticket } from '@/server/api/tickets'
 
@@ -172,32 +166,23 @@ export const ticketColumns: ColumnDef<Ticket>[] = [
   },
   {
     id: 'actions',
+    header: 'Actions',
     cell: ({ row, table }) => {
       const onViewTicketActions = (
         table.options.meta as { onViewTicketActions?: (ticket: Ticket) => void }
       )?.onViewTicketActions
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                className="data-open:bg-muted text-muted-foreground flex size-8"
-                size="icon"
-              />
-            }
+        <div className="flex justify-start">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-[11px] cursor-pointer"
+            onClick={() => onViewTicketActions?.(row.original)}
           >
-            <EllipsisVerticalIcon />
-            <span className="sr-only">Open menu</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
-            <DropdownMenuItem
-              onClick={() => onViewTicketActions?.(row.original)}
-            >
-              Resolve / Close
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            Resolve
+          </Button>
+        </div>
       )
     },
   },

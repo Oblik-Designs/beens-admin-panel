@@ -268,7 +268,7 @@ export function TicketActionSheet({
                   </p>
                 )}
                 <Separator className="my-4" />
-                {ticket.attachments?.length > 0 &&
+                {ticket.attachments?.length > 0 ? (
                   ticket.attachments.map((attachment) => (
                     <a
                       key={attachment._id}
@@ -279,7 +279,12 @@ export function TicketActionSheet({
                     >
                       {attachment.filename}
                     </a>
-                  ))}
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    No attachments found.
+                  </p>
+                )}
               </CardContent>
             </Card>
             <Tabs

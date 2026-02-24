@@ -2,17 +2,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Link } from '@tanstack/react-router'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import type { ColumnDef } from '@tanstack/react-table'
 import {
   CircleCheckIcon,
-  EllipsisVerticalIcon,
   LoaderIcon,
   SquareArrowOutUpRight,
   UserIcon,
@@ -147,33 +139,42 @@ export const userColumns: ColumnDef<User>[] = [
   },
   {
     id: 'actions',
+    header: 'Actions',
     cell: ({ row, table }) => {
       const onViewUser = (
-        table.options.meta as { onViewUser?: (user: User) => void }
+        table.options.meta as {
+          onViewUser?: (user: User) => void
+          onDeleteUser?: (user: User) => void
+        }
       )?.onViewUser
+      const onDeleteUser = (
+        table.options.meta as {
+          onViewUser?: (user: User) => void
+          onDeleteUser?: (user: User) => void
+        }
+      )?.onDeleteUser
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                className="data-open:bg-muted text-muted-foreground flex size-8"
-                size="icon"
-              />
-            }
+        <div className="flex justify-start gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-[11px] cursor-pointer"
+            onClick={() => onViewUser?.(row.original)}
           >
-            <EllipsisVerticalIcon />
-            <span className="sr-only">Open menu</span>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent align="end" className="w-32">
-            <DropdownMenuItem onClick={() => onViewUser?.(row.original)}>
-              View
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            View
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-[11px] text-destructive cursor-pointer"
+            onClick={() => onDeleteUser?.(row.original)}
+            disabled={!onDeleteUser}
+          >
+            Delete
+          </Button>
+        </div>
       )
     },
   },

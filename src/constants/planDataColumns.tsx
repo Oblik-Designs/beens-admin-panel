@@ -1,5 +1,8 @@
+import type * as React from 'react'
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import type { ColumnDef } from '@tanstack/react-table'
 import { CalendarIcon, MapPinIcon, UserIcon, UsersIcon } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
@@ -49,14 +52,19 @@ export const planColumns: ColumnDef<Plan>[] = [
           onCreatorClick?: (userId: string) => void
         }
       )?.onCreatorClick
-      const handleClick = () => creator && onCreatorClick?.(creator._id)
+      const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation()
+        if (creator && onCreatorClick) {
+          onCreatorClick(creator._id)
+        }
+      }
 
       return (
         <button
           type="button"
           onClick={handleClick}
           disabled={!onCreatorClick || !creator}
-          className="flex items-center gap-2 px-4 py-1 text-left hover:bg-muted/50 rounded-md transition-colors disabled:pointer-events-none disabled:opacity-100"
+          className="flex items-center gap-2 px-4 py-1 text-left hover:bg-muted/50 rounded-md transition-colors disabled:pointer-events-none disabled:opacity-100 cursor-pointer"
         >
           <Avatar className="size-7">
             <AvatarImage src={creator?.profileImage} alt={name} />
@@ -64,7 +72,11 @@ export const planColumns: ColumnDef<Plan>[] = [
               <UserIcon className="size-3.25" />
             </AvatarFallback>
           </Avatar>
-          <span className={onCreatorClick && creator ? 'underline underline-offset-2' : ''}>
+          <span
+            className={
+              onCreatorClick && creator ? 'underline underline-offset-2' : ''
+            }
+          >
             {name}
           </span>
         </button>
@@ -147,7 +159,6 @@ export const planColumns: ColumnDef<Plan>[] = [
       )
     },
   },
-
   {
     accessorKey: 'createdAt',
     header: 'Created At',
@@ -159,6 +170,37 @@ export const planColumns: ColumnDef<Plan>[] = [
           <CalendarIcon className="size-3 text-muted-foreground" />
           <span className="text-xs">{formatDateTime(value)}</span>
         </div>
+      )
+    },
+  },
+  {
+    id: 'actions',
+    header: 'Actions',
+    cell: ({ row, table }) => {
+      const onViewPlan = (
+        table.options.meta as {
+          onViewPlan?: (planId: string) => void
+        }
+      )?.onViewPlan
+
+      const handleView = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation()
+        if (onViewPlan) {
+          onViewPlan(row.original._id)
+        }
+      }
+
+      return (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 px-2 text-[11px] cursor-pointer"
+          onClick={handleView}
+          disabled={!onViewPlan}
+        >
+          View
+        </Button>
       )
     },
   },

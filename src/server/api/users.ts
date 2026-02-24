@@ -175,3 +175,22 @@ export const updateUser = createServerFn({
 
   return result
 })
+
+export interface DeleteUserResponse {
+  success: boolean
+  data: any
+}
+
+export const deleteUser = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const id = ctx.data as string | undefined
+
+  if (!id) {
+    throw new Error('User ID is required')
+  }
+
+  const result = await apiClient.delete<DeleteUserResponse>(`/user/${id}`)
+
+  return result
+})
