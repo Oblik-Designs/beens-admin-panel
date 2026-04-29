@@ -1,4 +1,8 @@
 name = "beens-admin-panel"
+main = ".output/server/index.mjs"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = "dist"
+
+[assets]
+directory = ".output/public"
+binding = "ASSETS"
