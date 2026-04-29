@@ -1,11 +1,13 @@
 import { useAppSession } from './session'
 
+const API_PREFIX = '/v1'
+
 const getApiBaseUrl = () => {
-  const apiBaseUrl = process.env.VITE_API_BASE_URL
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
   if (!apiBaseUrl) {
     throw new Error('VITE_API_BASE_URL environment variable is not set')
   }
-  return apiBaseUrl
+  return `${apiBaseUrl.replace(/\/$/, '')}${API_PREFIX}`
 }
 
 const getAuthHeaders = async (
@@ -26,7 +28,8 @@ const getAuthHeaders = async (
 
 const buildUrl = (endpoint: string, baseUrl?: string) => {
   const base = baseUrl || getApiBaseUrl()
-  return new URL(endpoint, base).toString()
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
+  return `${base}${path}`
 }
 
 const getSessionId = async (): Promise<string> => {
@@ -126,17 +129,12 @@ const executeRequest = async <T>(
   options?: RequestInit,
 ): Promise<T> => {
   const headers = await getAuthHeaders(options?.headers)
-  console.log('headers: ', headers)
   const response = await fetch(buildUrl(endpoint), {
     ...options,
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
   })
-
-  console.log('data: ', data)
-
-  console.log('response: ', response)
 
   if (!response.ok) {
     if (isTokenExpired(response.status)) {

@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
@@ -13,6 +14,11 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { getProfileOptions } from '@/queries/users'
 import {
+  getAdminStatsOptions,
+  plansTimeseriesOptions,
+  transactionsTimeseriesOptions,
+} from '@/queries/admin'
+import {
   Area,
   AreaChart,
   CartesianGrid,
@@ -20,6 +26,33 @@ import {
   Tooltip,
   XAxis,
 } from 'recharts'
+
+const OPEN_TICKET_STATUSES = [
+  'OPEN',
+  'IN_PROGRESS',
+  'ESCALATED',
+  'AWAITING_USER_RESPONSE',
+] as const
+
+const sumCounts = (
+  source: Record<string, number | undefined> | undefined,
+  keys?: ReadonlyArray<string>,
+) => {
+  if (!source) return 0
+  const target = keys ?? Object.keys(source)
+  return target.reduce((acc, key) => acc + (source[key] ?? 0), 0)
+}
+
+const formatNumber = (value: number) => value.toLocaleString()
+
+const formatDateLabel = (iso: string) => {
+  const d = new Date(`${iso}T00:00:00Z`)
+  return d.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  })
+}
 
 type RangeValue = '3m' | '30d' | '7d'
 
@@ -29,35 +62,14 @@ const RANGE_LABEL: Record<RangeValue, string> = {
   '7d': 'last 7 days',
 }
 
-const plansPerDayData = [
-  { date: 'Apr 7', mobile: 120, desktop: 80 },
-  { date: 'Apr 13', mobile: 260, desktop: 190 },
-  { date: 'Apr 19', mobile: 210, desktop: 160 },
-  { date: 'Apr 26', mobile: 320, desktop: 240 },
-  { date: 'May 2', mobile: 280, desktop: 230 },
-  { date: 'May 8', mobile: 340, desktop: 260 },
-  { date: 'May 14', mobile: 300, desktop: 240 },
-  { date: 'May 21', mobile: 360, desktop: 270 },
-  { date: 'May 28', mobile: 310, desktop: 250 },
-  { date: 'Jun 3', mobile: 370, desktop: 280 },
-]
-
-const transactionsPerDayData = [
-  { date: 'Apr 7', amount: 320 },
-  { date: 'Apr 13', amount: 540 },
-  { date: 'Apr 19', amount: 430 },
-  { date: 'Apr 26', amount: 610 },
-  { date: 'May 2', amount: 580 },
-  { date: 'May 8', amount: 720 },
-  { date: 'May 14', amount: 690 },
-  { date: 'May 21', amount: 760 },
-  { date: 'May 28', amount: 730 },
-  { date: 'Jun 3', amount: 810 },
-]
-
 export const Route = createFileRoute('/(app)/')({
   loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(getProfileOptions)
+    await Promise.all([
+      context.queryClient.ensureQueryData(getProfileOptions),
+      context.queryClient.ensureQueryData(getAdminStatsOptions),
+      context.queryClient.ensureQueryData(plansTimeseriesOptions('3m')),
+      context.queryClient.ensureQueryData(transactionsTimeseriesOptions('3m')),
+    ])
   },
   component: App,
 })
@@ -66,6 +78,38 @@ function App() {
   const [plansRange, setPlansRange] = React.useState<RangeValue>('3m')
   const [transactionsRange, setTransactionsRange] =
     React.useState<RangeValue>('3m')
+
+  const { data: statsResponse } = useQuery(getAdminStatsOptions)
+  console.log('statsResponse is: ', statsResponse)
+  const stats = statsResponse?.data
+
+  const totalUsers = sumCounts(stats?.users)
+  const openTickets = sumCounts(stats?.tickets, OPEN_TICKET_STATUSES)
+  const unassignedTickets = stats?.tickets?.unassigned ?? 0
+  const activeDisputes = stats?.disputes?.active ?? 0
+  const frozenEscrowEntries = Object.entries(stats?.disputes?.frozenEscrow ?? {})
+
+  const revenueByCurrency = stats?.totalRevenue ?? {}
+  const primaryCurrency =
+    'THB' in revenueByCurrency
+      ? 'THB'
+      : (Object.keys(revenueByCurrency)[0] ?? null)
+  const primaryRevenue = primaryCurrency
+    ? (revenueByCurrency[primaryCurrency] ?? 0)
+    : 0
+  const otherRevenueEntries = Object.entries(revenueByCurrency).filter(
+    ([currency]) => currency !== primaryCurrency,
+  )
+
+  const { data: plansSeriesResponse } = useQuery(
+    plansTimeseriesOptions(plansRange),
+  )
+  const plansData = plansSeriesResponse?.data?.buckets ?? []
+
+  const { data: transactionsSeriesResponse } = useQuery(
+    transactionsTimeseriesOptions(transactionsRange),
+  )
+  const transactionsData = transactionsSeriesResponse?.data?.buckets ?? []
 
   return (
     <SidebarProvider
@@ -84,75 +128,81 @@ function App() {
             {/* Top 4 cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card size="sm">
-                <CardHeader className="flex flex-row items-start justify-between space-y-0">
+                <CardHeader>
                   <CardTitle className="text-sm font-medium">
                     Total Users
                   </CardTitle>
-                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                    ↑ 12.5%
-                  </span>
                 </CardHeader>
                 <CardContent className="space-y-1">
                   <p className="text-2xl font-semibold tracking-tight">
-                    12,345
+                    {formatNumber(totalUsers)}
+                  </p>
+                  <CardDescription>Across all account statuses.</CardDescription>
+                </CardContent>
+              </Card>
+
+              <Card size="sm">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">
+                    Open Tickets
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                  <p className="text-2xl font-semibold tracking-tight">
+                    {formatNumber(openTickets)}
                   </p>
                   <CardDescription>
-                    Trending up this month. Overall user base growth.
+                    {unassignedTickets > 0
+                      ? `${formatNumber(unassignedTickets)} unassigned`
+                      : 'Awaiting moderator action.'}
                   </CardDescription>
                 </CardContent>
               </Card>
 
               <Card size="sm">
-                <CardHeader className="flex flex-row items-start justify-between space-y-0">
+                <CardHeader>
                   <CardTitle className="text-sm font-medium">
-                    Total Plans Created
+                    Active Disputes
                   </CardTitle>
-                  <span className="text-xs font-medium text-red-600 dark:text-red-400">
-                    ↓ 20%
-                  </span>
                 </CardHeader>
                 <CardContent className="space-y-1">
-                  <p className="text-2xl font-semibold tracking-tight">1,234</p>
+                  <p className="text-2xl font-semibold tracking-tight">
+                    {formatNumber(activeDisputes)}
+                  </p>
                   <CardDescription>
-                    Down this period. Plan creation needs attention.
+                    {frozenEscrowEntries.length > 0
+                      ? `Frozen escrow: ${frozenEscrowEntries
+                          .map(
+                            ([currency, amount]) =>
+                              `${currency} ${formatNumber(amount)}`,
+                          )
+                          .join(', ')}`
+                      : 'Financial disputes in progress.'}
                   </CardDescription>
                 </CardContent>
               </Card>
 
               <Card size="sm">
-                <CardHeader className="flex flex-row items-start justify-between space-y-0">
+                <CardHeader>
                   <CardTitle className="text-sm font-medium">
-                    Total Plans Completed
+                    Total Revenue
                   </CardTitle>
-                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                    ↑ 12.5%
-                  </span>
                 </CardHeader>
                 <CardContent className="space-y-1">
                   <p className="text-2xl font-semibold tracking-tight">
-                    45,678
+                    {primaryCurrency
+                      ? `${`฿`} ${formatNumber(primaryRevenue)}`
+                      : '—'}
                   </p>
                   <CardDescription>
-                    Strong completion rate. Users stay engaged.
-                  </CardDescription>
-                </CardContent>
-              </Card>
-
-              <Card size="sm">
-                <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                  <CardTitle className="text-sm font-medium">
-                    Total Transactions
-                  </CardTitle>
-                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                    ↑ 4.5%
-                  </span>
-                </CardHeader>
-                <CardContent className="space-y-1">
-                  <p className="text-2xl font-semibold tracking-tight">
-                    $1,250.00
-                  </p>
-                  <CardDescription>
-                    Steady performance. Meets current projections.
+                    {otherRevenueEntries.length > 0
+                      ? `+ ${otherRevenueEntries
+                          .map(
+                            ([currency, amount]) =>
+                              `${currency} ${formatNumber(amount)}`,
+                          )
+                          .join(', ')}`
+                      : 'Platform fees from completed transactions.'}
                   </CardDescription>
                 </CardContent>
               </Card>
@@ -185,12 +235,12 @@ function App() {
                 <CardContent className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
-                      data={plansPerDayData}
+                      data={plansData}
                       margin={{ left: -16, right: 0, top: 16, bottom: 0 }}
                     >
                       <defs>
                         <linearGradient
-                          id="plansMobile"
+                          id="plansCount"
                           x1="0"
                           y1="0"
                           x2="0"
@@ -207,24 +257,6 @@ function App() {
                             stopOpacity={0}
                           />
                         </linearGradient>
-                        <linearGradient
-                          id="plansDesktop"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="var(--chart-2)"
-                            stopOpacity={0.6}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="var(--chart-2)"
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
                       </defs>
                       <CartesianGrid
                         strokeDasharray="3 3"
@@ -236,9 +268,11 @@ function App() {
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
+                        tickFormatter={formatDateLabel}
                         className="text-xs text-muted-foreground"
                       />
                       <Tooltip
+                        labelFormatter={formatDateLabel}
                         contentStyle={{
                           borderRadius: 12,
                           borderColor: 'var(--chart-4)',
@@ -248,19 +282,11 @@ function App() {
                       />
                       <Area
                         type="monotone"
-                        dataKey="mobile"
-                        name="Mobile"
+                        dataKey="count"
+                        name="Plans"
                         stroke="var(--chart-1)"
                         strokeWidth={2}
-                        fill="url(#plansMobile)"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="desktop"
-                        name="Desktop"
-                        stroke="var(--chart-2)"
-                        strokeWidth={2}
-                        fill="url(#plansDesktop)"
+                        fill="url(#plansCount)"
                       />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -294,7 +320,7 @@ function App() {
                 <CardContent className="h-72 mt-1">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
-                      data={transactionsPerDayData}
+                      data={transactionsData}
                       margin={{ left: -16, right: 0, top: 16, bottom: 0 }}
                     >
                       <defs>
@@ -327,9 +353,11 @@ function App() {
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
+                        tickFormatter={formatDateLabel}
                         className="text-xs text-muted-foreground"
                       />
                       <Tooltip
+                        labelFormatter={formatDateLabel}
                         contentStyle={{
                           borderRadius: 12,
                           borderColor: 'var(--chart-4)',
@@ -340,7 +368,7 @@ function App() {
                       <Area
                         type="monotone"
                         dataKey="amount"
-                        name="Transactions"
+                        name="Revenue (THB)"
                         stroke="var(--chart-3)"
                         strokeWidth={2}
                         fill="url(#transactionsArea)"

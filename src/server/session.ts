@@ -1,39 +1,32 @@
 import { useSession } from '@tanstack/react-start/server'
 
-// Session data type matching verifyPassword response example structure
-// Based on getAuthVerify-password response example
+// Stores tokens plus a snapshot of /user/profile.
+// Profile payload keeps growing on the backend, so we type loosely:
+// _id is the only field consumed server-side; everything else is forwarded.
+export type SessionUser = {
+  _id: string
+  firstName?: string
+  lastName?: string
+  displayName?: string
+  profileImage?: string
+  role?: string
+  status?: string
+  subscription?: Record<string, unknown> | null
+  [key: string]: unknown
+}
+
 type SessionData = {
   accessToken: string
   refreshToken: string
-  user: {
-    _id: string
-    firstName: string
-    lastName: string
-    displayName: string
-    profileImage: string
-    role: string
-    status: string
-    subscription: {
-      _id: string
-      title: string
-      image: string
-      icon: string
-    }
-    level: {
-      _id: string
-      title: string
-      image: string
-      icon: string
-    }
-  }
+  user: SessionUser
 }
 
 export function useAppSession() {
   return useSession<SessionData>({
     name: 'beens-session',
-    password: process.env.VITE_SESSION_SECRET!, // At least 32 characters
+    password: import.meta.env.VITE_SESSION_SECRET!, // At least 32 characters
     cookie: {
-      secure: process.env.VITE_NODE_ENV === 'production',
+      secure: import.meta.env.VITE_NODE_ENV === 'production',
       sameSite: 'lax',
       httpOnly: true,
     },

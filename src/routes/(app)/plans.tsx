@@ -170,7 +170,7 @@ function PlansPage() {
 
   const plans = (data?.data?.plans as any[]) ?? []
   const pagination = data?.data?.pagination
-  const totalPlans = pagination?.totalPlans ?? plans.length
+  const totalPlans = pagination?.totalItems ?? plans.length
   const pageCount =
     pagination?.totalPages ??
     (search.limit > 0 ? Math.ceil(totalPlans / search.limit) : 1)

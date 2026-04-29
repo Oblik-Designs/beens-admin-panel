@@ -13,25 +13,17 @@ export const login = createServerFn({
 })
   .inputValidator(loginSchema)
   .handler(async ({ data }) => {
-    console.log('data is 2: ', data)
-
     const { email, password } = data as { email: string; password: string }
 
-    console.log('email is: ', email)
-
-    const apiBaseUrl = process.env.VITE_API_BASE_URL
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
     if (!apiBaseUrl) {
       throw new Error('VITE_API_BASE_URL environment variable is not set')
     }
 
-    const url = new URL('/auth/verify-password', apiBaseUrl)
+    const url = new URL('/v1/auth/verify-password', apiBaseUrl)
     url.searchParams.set('email', email)
     url.searchParams.set('password', password)
     url.searchParams.set('purpose', 'AUTH')
-
-    console.log('url is: ', url.toString())
-    console.log('email is: ', email)
-    console.log('password is: ', password)
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -46,30 +38,47 @@ export const login = createServerFn({
 
     const result = await response.json()
 
-    console.log('result is: ', result)
-
-    if (result.success && result.data) {
-      const session = await useAppSession()
-      await session.update({
-        accessToken: result.data.accessToken,
-        refreshToken: result.data.refreshToken,
-        user: result.data.user,
-      })
-
-      throw redirect({
-        to: '/',
-      })
+    if (!result.success || !result.data?.accessToken) {
+      throw new Error('Login failed: Invalid response')
     }
 
-    throw new Error('Login failed: Invalid response')
+    const { accessToken, refreshToken } = result.data as {
+      accessToken: string
+      refreshToken: string
+    }
+
+    const profileUrl = new URL('/v1/user/profile', apiBaseUrl)
+    const profileResponse = await fetch(profileUrl.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        authorization: `Bearer ${accessToken}`,
+      },
+    })
+
+    if (!profileResponse.ok) {
+      throw new Error('Login failed: Could not load profile')
+    }
+
+    const profileResult = await profileResponse.json()
+    if (!profileResult.success || !profileResult.data?._id) {
+      throw new Error('Login failed: Invalid profile response')
+    }
+
+    const session = await useAppSession()
+    await session.update({
+      accessToken,
+      refreshToken,
+      user: profileResult.data,
+    })
+
+    throw redirect({ to: '/' })
   })
 
 export const logout = createServerFn({
   method: 'POST',
 }).handler(async () => {
   const session = await useAppSession()
-  const sessionId = session.id
   await session.clear()
-  // return { sessionId };
   throw redirect({ to: '/login' })
 })

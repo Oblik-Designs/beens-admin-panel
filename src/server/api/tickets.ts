@@ -199,11 +199,11 @@ export const resolvePlanReportTicket = createServerFn({
   if (!data?.ticketId) {
     throw new Error('ticketId is required')
   }
+  const { ticketId, ...body } = data
   const result = await apiClient.post<TicketPlanResolveResponse>(
-    '/tickets/plan/resolve',
-    data,
+    `/tickets/${ticketId}/resolve`,
+    body,
   )
-  console.log('resolvePlanReportTicket result: ', result)
   return result
 })
 
@@ -214,10 +214,10 @@ export const resolveUserReportTicket = createServerFn({
   if (!data?.ticketId) {
     throw new Error('ticketId is required')
   }
+  const { ticketId, ...body } = data
   const result = await apiClient.post<TicketUserResolveResponse>(
-    '/tickets/user/resolve',
-    data,
+    `/tickets/${ticketId}/resolve`,
+    body,
   )
-  console.log('resolveUserReportTicket result: ', result)
   return result
 })

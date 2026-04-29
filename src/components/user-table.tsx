@@ -5,6 +5,16 @@ import { userColumns, type User } from '@/constants/userDataColumns'
 import { UserSheet } from '@/components/user-sheet'
 import { TableWithPagination } from '@/components/table-with-pagination'
 import { deleteUserOptions } from '@/queries/users'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 export type UserTableFilters = {
   status: string
@@ -36,6 +46,8 @@ export function UserTable({
 }: UserTableProps) {
   const [sheetOpen, setSheetOpen] = React.useState(false)
   const [selectedUser, setSelectedUser] = React.useState<User | null>(null)
+  const [pendingDelete, setPendingDelete] = React.useState<User | null>(null)
+  const [deleteError, setDeleteError] = React.useState<string | null>(null)
 
   const queryClient = useQueryClient()
 
@@ -47,6 +59,13 @@ export function UserTable({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
+      setPendingDelete(null)
+      setDeleteError(null)
+    },
+    onError: (error: unknown) => {
+      const message =
+        error instanceof Error ? error.message : 'Failed to delete user.'
+      setDeleteError(message)
     },
   })
 
@@ -55,12 +74,21 @@ export function UserTable({
     setSheetOpen(true)
   }, [])
 
-  const handleDeleteUser = React.useCallback(
-    (user: User) => {
-      deleteUserMutation.mutate(user._id)
-    },
-    [deleteUserMutation],
-  )
+  const handleDeleteUser = React.useCallback((user: User) => {
+    setDeleteError(null)
+    setPendingDelete(user)
+  }, [])
+
+  const handleConfirmDelete = React.useCallback(() => {
+    if (!pendingDelete) return
+    deleteUserMutation.mutate(pendingDelete._id)
+  }, [pendingDelete, deleteUserMutation])
+
+  const handleCancelDelete = React.useCallback(() => {
+    if (deleteUserMutation.isPending) return
+    setPendingDelete(null)
+    setDeleteError(null)
+  }, [deleteUserMutation.isPending])
 
   const handleSheetOpenChange = React.useCallback((open: boolean) => {
     setSheetOpen(open)
@@ -68,6 +96,12 @@ export function UserTable({
       setSelectedUser(null)
     }
   }, [])
+
+  const pendingDeleteName = pendingDelete
+    ? `${pendingDelete.firstName ?? ''} ${pendingDelete.lastName ?? ''}`.trim() ||
+      pendingDelete.email ||
+      pendingDelete._id
+    : ''
 
   return (
     <>
@@ -91,6 +125,39 @@ export function UserTable({
         onOpenChange={handleSheetOpenChange}
         user={selectedUser}
       />
+
+      <AlertDialog
+        open={!!pendingDelete}
+        onOpenChange={(open) => {
+          if (!open) handleCancelDelete()
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDeleteName
+                ? `${pendingDeleteName}'s account will be disabled. They won't be able to sign in until reinstated.`
+                : 'This account will be disabled.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <p className="text-destructive text-sm">{deleteError}</p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteUserMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleteUserMutation.isPending}
+            >
+              {deleteUserMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

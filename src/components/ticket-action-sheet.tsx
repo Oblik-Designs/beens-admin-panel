@@ -160,7 +160,7 @@ export function TicketActionSheet({
     removePlanMutation.mutate({
       ticketId: ticket._id,
       action: 'SUSPENSION',
-      escalationReason: removePlanMessage.trim(),
+      description: removePlanMessage.trim(),
     })
   }
 
@@ -182,7 +182,7 @@ export function TicketActionSheet({
     refundMutation.mutate({
       ticketId: ticket._id,
       action: isPartial ? 'PARTIAL_REFUND' : 'REFUND',
-      escalationReason: refundMessage.trim(),
+      description: refundMessage.trim(),
       refundAmount: amount,
     })
   }
@@ -191,12 +191,11 @@ export function TicketActionSheet({
     e.preventDefault()
     if (!ticket?._id || !banUntil || !banMessage.trim()) return
     const disabledUntil = new Date(banUntil).toISOString()
-    console.log('disabledUntil: ', disabledUntil)
     userResolveMutation.mutate({
       ticketId: ticket._id,
       action: 'BAN',
       disabledUntil: disabledUntil,
-      escalationReason: banMessage.trim(),
+      description: banMessage.trim(),
     })
   }
 
@@ -206,7 +205,7 @@ export function TicketActionSheet({
     userResolveMutation.mutate({
       ticketId: ticket._id,
       action: 'WARNING',
-      escalationReason: warnMessage.trim(),
+      description: warnMessage.trim(),
     })
   }
 
@@ -306,11 +305,7 @@ export function TicketActionSheet({
                       <CircleXIcon className="size-3.5" />
                       Close Ticket
                     </TabsTrigger>
-                    <TabsTrigger
-                      value="refund"
-                      className="gap-1.5 text-xs"
-                      disabled={true}
-                    >
+                    <TabsTrigger value="refund" className="gap-1.5 text-xs">
                       <ReceiptCentIcon className="size-3.5" />
                       Refund User
                     </TabsTrigger>
@@ -410,7 +405,7 @@ export function TicketActionSheet({
                     </form>
                   </TabsContent>
 
-                  {/* <TabsContent
+                  <TabsContent
                     value="refund"
                     className="mt-4 focus-visible:outline-none"
                   >
@@ -475,21 +470,20 @@ export function TicketActionSheet({
                       <Button
                         type="submit"
                         size="sm"
-                        // disabled={
-                        //   !refundMessage.trim() ||
-                        //   isPending ||
-                        //   !refundAmount.trim() ||
-                        //   Number.isNaN(Number(refundAmount)) ||
-                        //   Number(refundAmount) <= 0
-                        // }
-                        disabled={true}
+                        disabled={
+                          !refundMessage.trim() ||
+                          isPending ||
+                          !refundAmount.trim() ||
+                          Number.isNaN(Number(refundAmount)) ||
+                          Number(refundAmount) <= 0
+                        }
                       >
                         {refundMutation.isPending
                           ? 'Submitting...'
                           : 'Refund reporter'}
                       </Button>
                     </form>
-                  </TabsContent> */}
+                  </TabsContent>
                 </>
               ) : (
                 <>

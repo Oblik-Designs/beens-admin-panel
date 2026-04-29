@@ -58,10 +58,8 @@ export interface Plan {
 export interface PlanSearchPagination {
   page: number
   limit: number
-  totalPlans: number
+  totalItems: number
   totalPages: number
-  hasNextPage: boolean
-  hasPrevPage: boolean
 }
 
 export type PlanTypeFilter = 'Pay to Join' | 'Join to Earn' | 'Bid to Join'
@@ -107,8 +105,7 @@ export const searchPlans = createServerFn({
   method: 'POST',
 }).handler(async (ctx) => {
   const data = ctx.data as PlanSearchParams | undefined
-  const result = await apiClient.post<PlanSearchResponse>('/plan/search', data)
-  console.log(result)
+  const result = await apiClient.post<PlanSearchResponse>('/admin/plans', data)
   return result
 })
 
@@ -119,6 +116,6 @@ export const getPlanById = createServerFn({
   if (!planId) {
     throw new Error('Plan ID is required')
   }
-  const result = await apiClient.get<PlanByIdResponse>(`/plan/${planId}`)
+  const result = await apiClient.get<PlanByIdResponse>(`/plans/${planId}`)
   return result
 })
