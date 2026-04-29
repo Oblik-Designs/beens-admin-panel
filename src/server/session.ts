@@ -26,7 +26,7 @@ export function useAppSession() {
     name: 'beens-session',
     password: import.meta.env.VITE_SESSION_SECRET!, // At least 32 characters
     cookie: {
-      secure: import.meta.env.VITE_NODE_ENV === 'production',
+      secure: import.meta.env.PROD,
       sameSite: 'lax',
       httpOnly: true,
     },
