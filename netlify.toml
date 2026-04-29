@@ -1,7 +1,7 @@
 [build]
     base = "."
-    command = "vite build"
-    publish = "dist"
+    command = "NITRO_PRESET=netlify vite build"
+    publish = ".output/public"
 
 [build.environment]
     # Tell Netlify to ignore VITE_NODE_ENV in secrets scanning

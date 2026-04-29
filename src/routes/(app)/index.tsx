@@ -64,12 +64,14 @@ const RANGE_LABEL: Record<RangeValue, string> = {
 
 export const Route = createFileRoute('/(app)/')({
   loader: async ({ context }) => {
-    await Promise.all([
-      context.queryClient.ensureQueryData(getProfileOptions),
-      context.queryClient.ensureQueryData(getAdminStatsOptions),
-      context.queryClient.ensureQueryData(plansTimeseriesOptions('3m')),
-      context.queryClient.ensureQueryData(transactionsTimeseriesOptions('3m')),
-    ])
+    // Profile is the only required call (auth check). Stats and timeseries
+    // are warmed in the background — if the backend is missing endpoints or
+    // returns an error, the route still loads and components show their own
+    // empty/loading states instead of crashing the whole dashboard.
+    await context.queryClient.ensureQueryData(getProfileOptions)
+    void context.queryClient.prefetchQuery(getAdminStatsOptions)
+    void context.queryClient.prefetchQuery(plansTimeseriesOptions('3m'))
+    void context.queryClient.prefetchQuery(transactionsTimeseriesOptions('3m'))
   },
   component: App,
 })
