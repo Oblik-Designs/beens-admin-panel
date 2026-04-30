@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
+import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 import { getProfileOptions } from '@/queries/users'
 
 export const Route = createFileRoute('/(app)')({

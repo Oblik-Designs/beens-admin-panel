@@ -1,14 +1,14 @@
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Link } from '@tanstack/react-router'
-import type { ColumnDef } from '@tanstack/react-table'
 import {
   CircleCheckIcon,
   LoaderIcon,
   SquareArrowOutUpRight,
   UserIcon,
 } from 'lucide-react'
+import type { ColumnDef } from '@tanstack/react-table'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export type User = {
   _id: string
@@ -32,7 +32,7 @@ export type User = {
   profileImage?: string
 }
 
-export const userColumns: ColumnDef<User>[] = [
+export const userColumns: Array<ColumnDef<User>> = [
   // {
   //   id: 'select',
   //   header: ({ table }) => (

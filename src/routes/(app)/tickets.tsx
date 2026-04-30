@@ -10,13 +10,15 @@ import {
   UserIcon,
 } from 'lucide-react'
 
+import type { Ticket, TicketSearchParams } from '@/server/api/tickets'
+import type { UserSearchParams } from '@/server/api/users'
 import {
   Combobox,
-  ComboboxInput,
   ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
   ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
 } from '@/components/ui/combobox'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AppSidebar } from '@/components/app-sidebar'
@@ -40,10 +42,7 @@ import { TicketActionSheet } from '@/components/ticket-action-sheet'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { TicketsTable } from '@/components/tickets-table'
 import { searchTicketsOptions } from '@/queries/tickets'
-import type { Ticket } from '@/server/api/tickets'
 import { getUserByIdOptions, searchUserOptions } from '@/queries/users'
-import type { UserSearchParams } from '@/server/api/users'
-import type { TicketSearchParams } from '@/server/api/tickets'
 
 export const ticketSearchSchema = z.object({
   page: z.coerce.number().min(1).default(1),
@@ -95,7 +94,9 @@ function TicketsPage() {
   const [selectedTicket, setSelectedTicket] = React.useState<Ticket | null>(
     null,
   )
-  const [successMessage, setSuccessMessage] = React.useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = React.useState<string | null>(
+    null,
+  )
 
   React.useEffect(() => {
     setSelectedReporterId(search.reporter ?? '')
@@ -131,13 +132,13 @@ function TicketsPage() {
     enabled: !!userSearchParams?.query,
   })
 
-  const tickets = (data?.data?.tickets as any[]) ?? []
+  const tickets = (data?.data?.tickets as Array<any>) ?? []
   const pagination = data?.data?.pagination
-  const totalTickets = pagination?.totalTickets ?? tickets.length
+  const totalTickets = pagination?.totalTickets ?? 0
   const pageCount =
     pagination?.totalPages ??
     (search.limit > 0 ? Math.ceil(totalTickets / search.limit) : 1)
-  const pageIndex = pagination?.page ? pagination.page - 1 : 0
+  const pageIndex = search.page - 1
 
   const handlePageChange = (newPageIndex: number) => {
     navigate({
@@ -327,7 +328,7 @@ function TicketsPage() {
                           value={search.type ?? ''}
                           onValueChange={(value) =>
                             handleFilterChange({
-                              type: (value || '') as string | '',
+                              type: value || '',
                             })
                           }
                         >
@@ -351,7 +352,7 @@ function TicketsPage() {
                           value={search.status ?? ''}
                           onValueChange={(value) =>
                             handleFilterChange({
-                              status: (value || '') as string | '',
+                              status: value || '',
                             })
                           }
                         >
@@ -375,7 +376,7 @@ function TicketsPage() {
                           value={search.priority ?? ''}
                           onValueChange={(value) =>
                             handleFilterChange({
-                              priority: (value || '') as string | '',
+                              priority: value || '',
                             })
                           }
                         >
@@ -438,7 +439,7 @@ function TicketsPage() {
               {!isLoading && (
                 <>
                   <TicketsTable
-                    data={tickets as any[]}
+                    data={tickets}
                     pageIndex={pageIndex}
                     pageSize={search.limit}
                     pageCount={pageCount}

@@ -53,15 +53,11 @@ export interface UserSearchParams {
 export interface UserSearchResponse {
   success: boolean
   data: {
-    users: any[]
-    pagination: {
-      page: number
-      limit: number
-      totalPages: number
-      totalUsers: number
-      hasNextPage: boolean
-      hasPrevPage: boolean
-    }
+    users: Array<any>
+    total: number
+    page: number
+    limit: number
+    totalPages: number
   }
 }
 
@@ -131,7 +127,7 @@ export interface UserUpdatePayload {
   badge?: string
   profileImage?: string
   totalPlans?: number
-  images?: string[]
+  images?: Array<string>
   bio?: string
   highlight?: string
   subscription?: string

@@ -4,6 +4,12 @@ import * as React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 
+import {
+  CalendarClockIcon,
+  LayoutDashboardIcon,
+  TicketIcon,
+  UsersIcon,
+} from 'lucide-react'
 import { NavMain } from '@/components/nav-main'
 import { NavUser } from '@/components/nav-user'
 import {
@@ -15,12 +21,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import {
-  CalendarClockIcon,
-  LayoutDashboardIcon,
-  TicketIcon,
-  UsersIcon,
-} from 'lucide-react'
 import { getProfileOptions } from '@/queries/users'
 
 const navMain = [

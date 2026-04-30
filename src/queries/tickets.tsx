@@ -1,14 +1,16 @@
 import { mutationOptions, queryOptions } from '@tanstack/react-query'
+import type {
+  TicketCloseParams,
+  TicketPlanResolveParams,
+  TicketSearchParams,
+  TicketUserResolveParams,
+} from '@/server/api/tickets'
 import {
   closeTicket,
   getTicketById,
   resolvePlanReportTicket,
   resolveUserReportTicket,
   searchTickets,
-  type TicketCloseParams,
-  type TicketPlanResolveParams,
-  type TicketSearchParams,
-  type TicketUserResolveParams,
 } from '@/server/api/tickets'
 
 export const searchTicketsOptions = (params?: TicketSearchParams) =>

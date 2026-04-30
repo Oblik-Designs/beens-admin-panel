@@ -2,6 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query'
 
+import { EllipsisVerticalIcon, LogOutIcon, UserIcon } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -16,7 +17,6 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { logoutOptions } from '@/queries/auth'
-import { EllipsisVerticalIcon, LogOutIcon, UserIcon } from 'lucide-react'
 
 export function NavUser({
   user,

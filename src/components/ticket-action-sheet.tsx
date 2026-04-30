@@ -3,6 +3,16 @@
 import * as React from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import {
+  BanIcon,
+  CalendarIcon,
+  CircleXIcon,
+  ReceiptCentIcon,
+  UserIcon,
+} from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { Separator } from './ui/separator'
+import type { Ticket } from '@/server/api/tickets'
 import { DetailSheet } from '@/components/detail-sheet'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -23,16 +33,6 @@ import {
   resolvePlanReportTicketOptions,
   resolveUserReportTicketOptions,
 } from '@/queries/tickets'
-import type { Ticket } from '@/server/api/tickets'
-import {
-  BanIcon,
-  CalendarIcon,
-  CircleXIcon,
-  ReceiptCentIcon,
-  UserIcon,
-} from 'lucide-react'
-import { Separator } from './ui/separator'
-import { format, parseISO } from 'date-fns'
 
 function getReporterName(reporter: Ticket['reporter']) {
   if (!reporter) return 'Unknown'

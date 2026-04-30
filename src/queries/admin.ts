@@ -1,10 +1,9 @@
 import { queryOptions } from '@tanstack/react-query'
+import type { StatsRange, TransactionsMetric } from '@/server/api/admin'
 import {
   getAdminStats,
   getPlansTimeseries,
   getTransactionsTimeseries,
-  type StatsRange,
-  type TransactionsMetric,
 } from '@/server/api/admin'
 
 export const getAdminStatsOptions = queryOptions({

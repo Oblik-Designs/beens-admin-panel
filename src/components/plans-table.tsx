@@ -98,7 +98,7 @@ export function PlansTable({
     enabled: !!selectedPlanId,
   })
 
-  const plan = (planResponse?.data ?? null) as any
+  const plan = planResponse?.data ?? null
 
   const handleCreatorClick = React.useCallback((userId: string) => {
     setSelectedCreatorId(userId)

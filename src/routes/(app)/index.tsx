@@ -1,6 +1,14 @@
 import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+} from 'recharts'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
@@ -18,14 +26,6 @@ import {
   plansTimeseriesOptions,
   transactionsTimeseriesOptions,
 } from '@/queries/admin'
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-} from 'recharts'
 
 const OPEN_TICKET_STATUSES = [
   'OPEN',
@@ -89,7 +89,9 @@ function App() {
   const openTickets = sumCounts(stats?.tickets, OPEN_TICKET_STATUSES)
   const unassignedTickets = stats?.tickets?.unassigned ?? 0
   const activeDisputes = stats?.disputes?.active ?? 0
-  const frozenEscrowEntries = Object.entries(stats?.disputes?.frozenEscrow ?? {})
+  const frozenEscrowEntries = Object.entries(
+    stats?.disputes?.frozenEscrow ?? {},
+  )
 
   const revenueByCurrency = stats?.totalRevenue ?? {}
   const primaryCurrency =
@@ -139,7 +141,9 @@ function App() {
                   <p className="text-2xl font-semibold tracking-tight">
                     {formatNumber(totalUsers)}
                   </p>
-                  <CardDescription>Across all account statuses.</CardDescription>
+                  <CardDescription>
+                    Across all account statuses.
+                  </CardDescription>
                 </CardContent>
               </Card>
 

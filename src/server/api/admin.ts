@@ -25,7 +25,7 @@ export interface AdminStatsData {
   users: Record<string, number>
   moderation: { suspendedPlans: number }
   totalRevenue: Record<string, number>
-  workload: AdminWorkloadEntry[]
+  workload: Array<AdminWorkloadEntry>
 }
 
 export interface AdminStatsResponse {
@@ -54,7 +54,7 @@ export interface PlansTimeseriesResponse {
   success: boolean
   data: {
     range: string
-    buckets: PlansTimeseriesBucket[]
+    buckets: Array<PlansTimeseriesBucket>
   }
 }
 
@@ -89,7 +89,7 @@ export interface TransactionsTimeseriesResponse {
     range: string
     metric: string
     currency: string
-    buckets: TransactionsTimeseriesBucket[]
+    buckets: Array<TransactionsTimeseriesBucket>
   }
 }
 

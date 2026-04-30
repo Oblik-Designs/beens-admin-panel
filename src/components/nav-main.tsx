@@ -1,5 +1,6 @@
 'use client'
 
+import { Link, useMatchRoute } from '@tanstack/react-router'
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -7,16 +8,15 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { Link, useMatchRoute } from '@tanstack/react-router'
 
 export function NavMain({
   items,
 }: {
-  items: {
+  items: Array<{
     title: string
     url: string
     icon?: React.ReactNode
-  }[]
+  }>
 }) {
   const matchRoute = useMatchRoute()
 

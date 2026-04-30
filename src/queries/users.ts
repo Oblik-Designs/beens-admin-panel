@@ -1,12 +1,11 @@
 import { queryOptions } from '@tanstack/react-query'
+import type { UserSearchParams, UserUpdatePayload } from '@/server/api/users'
 import {
+  deleteUser,
   getProfile,
   getUserById,
   searchUsers,
   updateUser,
-  deleteUser,
-  type UserSearchParams,
-  type UserUpdatePayload,
 } from '@/server/api/users'
 
 export const getProfileOptions = queryOptions({

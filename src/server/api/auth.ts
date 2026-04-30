@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
-import { useAppSession } from '../session'
 import { redirect } from '@tanstack/react-router'
 import { z } from 'zod'
+import { useAppSession } from '../session'
 
 const loginSchema = z.object({
   email: z.string().email(),

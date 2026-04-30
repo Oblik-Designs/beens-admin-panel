@@ -1,9 +1,9 @@
-import { ticketColumns } from '@/constants/ticketDataColumns'
 import type { Ticket } from '@/server/api/tickets'
+import { ticketColumns } from '@/constants/ticketDataColumns'
 import { TableWithPagination } from '@/components/table-with-pagination'
 
 type TicketsTableProps = {
-  data: Ticket[]
+  data: Array<Ticket>
   pageIndex: number
   pageSize: number
   pageCount: number

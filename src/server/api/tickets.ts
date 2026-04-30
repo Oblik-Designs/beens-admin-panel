@@ -22,13 +22,13 @@ export interface Ticket {
   closedAt?: string
   createdAt: string
   updatedAt: string
-  attachments: {
+  attachments: Array<{
     _id: string
     filename: string
     url: string
     mimeType: string
     size: number
-  }[]
+  }>
 }
 
 export interface TicketReportedTargetUser {
@@ -42,7 +42,7 @@ export interface TicketReportedTarget {
   targetId: TicketReportedTargetUser
   targetModel: string
   reason: string
-  evidence: string[]
+  evidence: Array<string>
   status: string
   description: string
 }
@@ -55,10 +55,10 @@ export interface TicketStatusHistoryEntry {
 }
 
 export interface TicketDetail extends Ticket {
-  reportedTargets: TicketReportedTarget[]
-  messages: {}[]
-  assignmentHistory: {}[]
-  statusHistory: TicketStatusHistoryEntry[]
+  reportedTargets: Array<TicketReportedTarget>
+  messages: Array<{}>
+  assignmentHistory: Array<{}>
+  statusHistory: Array<TicketStatusHistoryEntry>
 }
 
 export interface TicketDetailResponse {
@@ -99,7 +99,7 @@ export interface TicketResolution {
   description: string
   resolvedBy: TicketUserSummary
   resolvedAt: string
-  affectedUsers?: string[]
+  affectedUsers?: Array<string>
 }
 
 export interface TicketPlanResolveData extends Ticket {
@@ -143,7 +143,7 @@ export interface TicketSearchParams {
 export interface TicketSearchResponse {
   success: boolean
   data: {
-    tickets: Ticket[]
+    tickets: Array<Ticket>
     pagination: TicketSearchPagination
   }
 }

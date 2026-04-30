@@ -1,12 +1,12 @@
+import { CalendarIcon, MapPinIcon, UserIcon, UsersIcon } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
 import type * as React from 'react'
 
+import type { ColumnDef } from '@tanstack/react-table'
+import type { Plan } from '@/server/api/plans'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import type { ColumnDef } from '@tanstack/react-table'
-import { CalendarIcon, MapPinIcon, UserIcon, UsersIcon } from 'lucide-react'
-import { format, parseISO } from 'date-fns'
-import type { Plan } from '@/server/api/plans'
 
 const formatDateTime = (value?: string) => {
   if (!value) return '-'
@@ -37,7 +37,7 @@ const combineDateAndTime = (date?: string, time?: string) => {
   return `${date}T${time}`
 }
 
-export const planColumns: ColumnDef<Plan>[] = [
+export const planColumns: Array<ColumnDef<Plan>> = [
   {
     id: 'creator',
     header: 'Creator',

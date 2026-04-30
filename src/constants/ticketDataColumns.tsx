@@ -1,11 +1,11 @@
+import { CalendarIcon, UserIcon } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import type { ColumnDef } from '@tanstack/react-table'
+import type { Ticket } from '@/server/api/tickets'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { formatLabel } from '@/lib/utils'
-import type { ColumnDef } from '@tanstack/react-table'
-import { CalendarIcon, UserIcon } from 'lucide-react'
-import { format, parseISO } from 'date-fns'
-import type { Ticket } from '@/server/api/tickets'
 
 const formatDateTime = (value?: string) => {
   if (!value) return '-'
@@ -39,7 +39,7 @@ const getFullName = (user?: {
   )
 }
 
-export const ticketColumns: ColumnDef<Ticket>[] = [
+export const ticketColumns: Array<ColumnDef<Ticket>> = [
   {
     id: 'reporter',
     header: 'Reporter',
@@ -125,7 +125,7 @@ export const ticketColumns: ColumnDef<Ticket>[] = [
     header: 'Reason',
     cell: ({ row }) => {
       const reportedTargets = (
-        row.original as { reportedTargets?: { reason: string }[] }
+        row.original as { reportedTargets?: Array<{ reason: string }> }
       )?.reportedTargets
       const reason =
         reportedTargets

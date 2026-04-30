@@ -1,10 +1,10 @@
 import * as React from 'react'
 
 import {
+  EmptyActions,
+  EmptyDescription,
   Empty as EmptyPrimitive,
   EmptyTitle,
-  EmptyDescription,
-  EmptyActions,
 } from '@/components/ui/empty'
 
 type EmptyProps = React.ComponentProps<typeof EmptyPrimitive>

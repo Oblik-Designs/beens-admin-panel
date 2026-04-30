@@ -1,14 +1,18 @@
 'use client'
 
-import * as React from 'react'
 import {
   flexRender,
   getCoreRowModel,
   getPaginationRowModel,
   useReactTable,
-  type ColumnDef,
-  type TableMeta,
 } from '@tanstack/react-table'
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
+} from 'lucide-react'
+import type { ColumnDef, TableMeta } from '@tanstack/react-table'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -20,12 +24,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Label } from '@/components/ui/label'
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronsLeftIcon,
-  ChevronsRightIcon,
-} from 'lucide-react'
 
 export type TableWithPaginationMeta = {
   onViewUser?: (user: unknown) => void
@@ -35,8 +33,8 @@ export type TableWithPaginationMeta = {
 }
 
 export type TableWithPaginationProps<TData> = {
-  data: TData[]
-  columns: ColumnDef<TData>[]
+  data: Array<TData>
+  columns: Array<ColumnDef<TData>>
   getRowId: (row: TData) => string
   pageIndex: number
   pageSize: number
@@ -50,7 +48,7 @@ export type TableWithPaginationProps<TData> = {
 }
 
 export function TableWithPagination<TData>({
-  data: initialData,
+  data,
   columns,
   getRowId,
   pageIndex,
@@ -63,14 +61,10 @@ export function TableWithPagination<TData>({
   loadingMessage = 'Loading...',
   isLoading = false,
 }: TableWithPaginationProps<TData>) {
-  const [data, setData] = React.useState<TData[]>(() => initialData ?? [])
-
-  React.useEffect(() => {
-    setData(initialData ?? [])
-  }, [initialData])
+  const safePageCount = Math.max(0, pageCount)
 
   const table = useReactTable({
-    data,
+    data: data ?? [],
     columns,
     state: {
       pagination: {
@@ -80,7 +74,7 @@ export function TableWithPagination<TData>({
     },
     getRowId,
     manualPagination: true,
-    pageCount,
+    pageCount: safePageCount,
     onPaginationChange: (updater) => {
       const newPagination =
         typeof updater === 'function'
@@ -211,8 +205,11 @@ export function TableWithPagination<TData>({
             </Button>
 
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              {table.getState().pagination.pageIndex + 1} of{' '}
-              {table.getPageCount() || 1}
+              {Math.min(
+                table.getState().pagination.pageIndex + 1,
+                Math.max(safePageCount, 1),
+              )}{' '}
+              of {safePageCount || 1}
             </div>
 
             <Button
@@ -229,9 +226,7 @@ export function TableWithPagination<TData>({
               variant="outline"
               className="hidden size-8 lg:flex"
               size="icon"
-              onClick={() =>
-                table.setPageIndex((pageCount ? pageCount : 1) - 1)
-              }
+              onClick={() => table.setPageIndex(Math.max(safePageCount, 1) - 1)}
               disabled={!table.getCanNextPage()}
             >
               <span className="sr-only">Go to last page</span>

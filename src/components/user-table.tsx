@@ -1,7 +1,8 @@
 import * as React from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { userColumns, type User } from '@/constants/userDataColumns'
+import type { User } from '@/constants/userDataColumns'
+import { userColumns } from '@/constants/userDataColumns'
 import { UserSheet } from '@/components/user-sheet'
 import { TableWithPagination } from '@/components/table-with-pagination'
 import { deleteUserOptions } from '@/queries/users'
@@ -25,7 +26,7 @@ export type UserTableFilters = {
 }
 
 type UserTableProps = {
-  data: User[]
+  data: Array<User>
   pageIndex: number
   pageSize: number
   pageCount: number

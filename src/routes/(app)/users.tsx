@@ -9,6 +9,7 @@ import {
   SlidersHorizontalIcon,
 } from 'lucide-react'
 
+import type { UserSearchParams } from '@/server/api/users'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
@@ -29,7 +30,6 @@ import {
 } from '@/components/ui/select'
 import { UserTable } from '@/components/user-table'
 import { searchUserOptions } from '@/queries/users'
-import type { UserSearchParams } from '@/server/api/users'
 
 export const userSearchSchema = z.object({
   page: z.coerce.number().min(1).default(1),
@@ -105,9 +105,12 @@ function UsersPage() {
   const apiParams = searchToParams(search)
   const { data, isLoading, isFetching } = useQuery(searchUserOptions(apiParams))
 
-  const users = (data?.data?.users as any[]) ?? []
-  const total = data?.data?.pagination?.totalUsers ?? 0
-  const pageCount = search.limit > 0 ? Math.ceil(total / search.limit) : 1
+  const payload: any = data?.data
+  const users = (payload?.users as Array<any>) ?? []
+  const total = payload?.total ?? payload?.pagination?.totalUsers ?? 0
+  const apiTotalPages = payload?.totalPages ?? payload?.pagination?.totalPages
+  const pageCount =
+    apiTotalPages ?? (search.limit > 0 ? Math.ceil(total / search.limit) : 1)
   const pageIndex = search.page - 1
 
   const handlePageChange = (newPageIndex: number) => {
@@ -332,7 +335,7 @@ function UsersPage() {
               </div>
               {!isLoading && (
                 <UserTable
-                  data={users as any[]}
+                  data={users}
                   pageIndex={pageIndex}
                   pageSize={search.limit}
                   pageCount={pageCount}

@@ -1,9 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
-import {
-  searchPlans,
-  type PlanSearchParams,
-  getPlanById,
-} from '@/server/api/plans'
+import type { PlanSearchParams } from '@/server/api/plans'
+import { getPlanById, searchPlans } from '@/server/api/plans'
 
 export const searchPlansOptions = (params?: PlanSearchParams) =>
   queryOptions({

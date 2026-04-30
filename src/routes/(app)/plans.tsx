@@ -7,8 +7,15 @@ import {
   ChevronDownIcon,
   SearchIcon,
   SlidersHorizontalIcon,
+  UserIcon,
 } from 'lucide-react'
 
+import type { UserSearchParams } from '@/server/api/users'
+import type {
+  PlanSearchParams,
+  PlanStatusFilter,
+  PlanTypeFilter,
+} from '@/server/api/plans'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
@@ -29,23 +36,16 @@ import {
 } from '@/components/ui/select'
 import {
   Combobox,
-  ComboboxInput,
   ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
   ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
 } from '@/components/ui/combobox'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { UserIcon } from 'lucide-react'
 import { PlansTable } from '@/components/plans-table'
 import { searchPlansOptions } from '@/queries/plans'
 import { getUserByIdOptions, searchUserOptions } from '@/queries/users'
-import type { UserSearchParams } from '@/server/api/users'
-import type {
-  PlanSearchParams,
-  PlanStatusFilter,
-  PlanTypeFilter,
-} from '@/server/api/plans'
 
 export const planSearchSchema = z.object({
   page: z.coerce.number().min(1).default(1),
@@ -124,6 +124,7 @@ function PlansPage() {
           search: (prev) => ({
             ...prev,
             query: value || undefined,
+            page: 1,
           }),
           replace: true,
         })
@@ -168,13 +169,13 @@ function PlansPage() {
     enabled: !!userSearchParams?.query,
   })
 
-  const plans = (data?.data?.plans as any[]) ?? []
+  const plans = (data?.data?.plans as Array<any>) ?? []
   const pagination = data?.data?.pagination
-  const totalPlans = pagination?.totalItems ?? plans.length
+  const totalPlans = pagination?.totalItems ?? 0
   const pageCount =
     pagination?.totalPages ??
     (search.limit > 0 ? Math.ceil(totalPlans / search.limit) : 1)
-  const pageIndex = pagination?.page ? pagination.page - 1 : 0
+  const pageIndex = search.page - 1
 
   const handlePageChange = (newPageIndex: number) => {
     navigate({
@@ -439,7 +440,7 @@ function PlansPage() {
 
               {!isLoading && (
                 <PlansTable
-                  data={plans as any[]}
+                  data={plans}
                   pageIndex={pageIndex}
                   pageSize={search.limit}
                   pageCount={pageCount}

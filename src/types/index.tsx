@@ -3593,8 +3593,8 @@ export interface operations {
              * @example All documents are valid
              */
             moderationComment?: string
-            rejectLabels?: string[]
-            buttonIds?: string[]
+            rejectLabels?: Array<string>
+            buttonIds?: Array<string>
           }
           /**
            * @description KYC level name from Sumsub
@@ -3661,8 +3661,8 @@ export interface operations {
              * @example All documents are valid
              */
             moderationComment?: string
-            rejectLabels?: string[]
-            buttonIds?: string[]
+            rejectLabels?: Array<string>
+            buttonIds?: Array<string>
           }
           /**
            * @description KYC level name from Sumsub
@@ -3729,8 +3729,8 @@ export interface operations {
              * @example All documents are valid
              */
             moderationComment?: string
-            rejectLabels?: string[]
-            buttonIds?: string[]
+            rejectLabels?: Array<string>
+            buttonIds?: Array<string>
           }
           /**
            * @description KYC level name from Sumsub
@@ -4968,7 +4968,7 @@ export interface operations {
                *       40.7128
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
           }
           /** @example https://example.com/profile.jpg */
@@ -4978,7 +4978,7 @@ export interface operations {
            *       "https://example.com/image1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /** @example This is my bio */
           bio?: string
           /** @example My highlight */
@@ -5005,7 +5005,7 @@ export interface operations {
            *       "Friendly"
            *     ]
            */
-          perceptions?: (
+          perceptions?: Array<
             | 'Kind'
             | 'Friendly'
             | 'Funny'
@@ -5018,7 +5018,7 @@ export interface operations {
             | 'Quiet'
             | 'Shy'
             | 'Bold'
-          )[]
+          >
         }
         'multipart/form-data': {
           /** @example John */
@@ -5067,7 +5067,7 @@ export interface operations {
                *       40.7128
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
           }
           /** @example https://example.com/profile.jpg */
@@ -5077,7 +5077,7 @@ export interface operations {
            *       "https://example.com/image1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /** @example This is my bio */
           bio?: string
           /** @example My highlight */
@@ -5104,7 +5104,7 @@ export interface operations {
            *       "Friendly"
            *     ]
            */
-          perceptions?: (
+          perceptions?: Array<
             | 'Kind'
             | 'Friendly'
             | 'Funny'
@@ -5117,7 +5117,7 @@ export interface operations {
             | 'Quiet'
             | 'Shy'
             | 'Bold'
-          )[]
+          >
         }
         'text/plain': {
           /** @example John */
@@ -5166,7 +5166,7 @@ export interface operations {
                *       40.7128
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
           }
           /** @example https://example.com/profile.jpg */
@@ -5176,7 +5176,7 @@ export interface operations {
            *       "https://example.com/image1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /** @example This is my bio */
           bio?: string
           /** @example My highlight */
@@ -5203,7 +5203,7 @@ export interface operations {
            *       "Friendly"
            *     ]
            */
-          perceptions?: (
+          perceptions?: Array<
             | 'Kind'
             | 'Friendly'
             | 'Funny'
@@ -5216,7 +5216,7 @@ export interface operations {
             | 'Quiet'
             | 'Shy'
             | 'Bold'
-          )[]
+          >
         }
       }
     }
@@ -8107,7 +8107,7 @@ export interface operations {
                *       40.7128
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
           }
           /** @example ACTIVE */
@@ -8125,7 +8125,7 @@ export interface operations {
            *       "https://example.com/image1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /** @example This is my bio */
           bio?: string
           /** @example My highlight */
@@ -8237,7 +8237,7 @@ export interface operations {
                *       40.7128
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
           }
           /** @example ACTIVE */
@@ -8255,7 +8255,7 @@ export interface operations {
            *       "https://example.com/image1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /** @example This is my bio */
           bio?: string
           /** @example My highlight */
@@ -8367,7 +8367,7 @@ export interface operations {
                *       40.7128
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
           }
           /** @example ACTIVE */
@@ -8385,7 +8385,7 @@ export interface operations {
            *       "https://example.com/image1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /** @example This is my bio */
           bio?: string
           /** @example My highlight */
@@ -8880,7 +8880,7 @@ export interface operations {
                *       40.7128
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
           }
           /** @example https://example.com/profile.jpg */
@@ -8939,7 +8939,7 @@ export interface operations {
                *       40.7128
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
           }
           /** @example https://example.com/profile.jpg */
@@ -8998,7 +8998,7 @@ export interface operations {
                *       40.7128
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
           }
           /** @example https://example.com/profile.jpg */
@@ -9534,7 +9534,7 @@ export interface operations {
           query?: string
           status?:
             | ('PENDING' | 'MESSAGE' | 'FRIEND' | 'BLOCKED')
-            | ('PENDING' | 'MESSAGE' | 'FRIEND' | 'BLOCKED')[]
+            | Array<'PENDING' | 'MESSAGE' | 'FRIEND' | 'BLOCKED'>
           /** @example 1 */
           page?: number
           /** @example 10 */
@@ -9545,7 +9545,7 @@ export interface operations {
           query?: string
           status?:
             | ('PENDING' | 'MESSAGE' | 'FRIEND' | 'BLOCKED')
-            | ('PENDING' | 'MESSAGE' | 'FRIEND' | 'BLOCKED')[]
+            | Array<'PENDING' | 'MESSAGE' | 'FRIEND' | 'BLOCKED'>
           /** @example 1 */
           page?: number
           /** @example 10 */
@@ -9556,7 +9556,7 @@ export interface operations {
           query?: string
           status?:
             | ('PENDING' | 'MESSAGE' | 'FRIEND' | 'BLOCKED')
-            | ('PENDING' | 'MESSAGE' | 'FRIEND' | 'BLOCKED')[]
+            | Array<'PENDING' | 'MESSAGE' | 'FRIEND' | 'BLOCKED'>
           /** @example 1 */
           page?: number
           /** @example 10 */
@@ -11658,7 +11658,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439011"
            *     ]
            */
-          cohosts?: string[]
+          cohosts?: Array<string>
           location?: {
             /** @example 123 Main St */
             address?: string
@@ -11671,7 +11671,7 @@ export interface operations {
                *       40.73061
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
             /** @example New York */
             city?: string
@@ -11688,12 +11688,12 @@ export interface operations {
              * @example 6
              */
             day: number
-            times: {
+            times: Array<{
               /** @example 09:00 */
               startTime: string
               /** @example 17:00 */
               endTime: string
-            }[]
+            }>
           }
           /**
            * @description Duration in minutes
@@ -11729,7 +11729,7 @@ export interface operations {
            *       "https://example.com/image1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /**
            * @example [
            *       "hiking",
@@ -11737,7 +11737,7 @@ export interface operations {
            *       "adventure"
            *     ]
            */
-          tags?: string[]
+          tags?: Array<string>
         }
         'multipart/form-data': {
           /**
@@ -11763,7 +11763,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439011"
            *     ]
            */
-          cohosts?: string[]
+          cohosts?: Array<string>
           location?: {
             /** @example 123 Main St */
             address?: string
@@ -11776,7 +11776,7 @@ export interface operations {
                *       40.73061
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
             /** @example New York */
             city?: string
@@ -11793,12 +11793,12 @@ export interface operations {
              * @example 6
              */
             day: number
-            times: {
+            times: Array<{
               /** @example 09:00 */
               startTime: string
               /** @example 17:00 */
               endTime: string
-            }[]
+            }>
           }
           /**
            * @description Duration in minutes
@@ -11834,7 +11834,7 @@ export interface operations {
            *       "https://example.com/image1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /**
            * @example [
            *       "hiking",
@@ -11842,7 +11842,7 @@ export interface operations {
            *       "adventure"
            *     ]
            */
-          tags?: string[]
+          tags?: Array<string>
         }
         'text/plain': {
           /**
@@ -11868,7 +11868,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439011"
            *     ]
            */
-          cohosts?: string[]
+          cohosts?: Array<string>
           location?: {
             /** @example 123 Main St */
             address?: string
@@ -11881,7 +11881,7 @@ export interface operations {
                *       40.73061
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
             /** @example New York */
             city?: string
@@ -11898,12 +11898,12 @@ export interface operations {
              * @example 6
              */
             day: number
-            times: {
+            times: Array<{
               /** @example 09:00 */
               startTime: string
               /** @example 17:00 */
               endTime: string
-            }[]
+            }>
           }
           /**
            * @description Duration in minutes
@@ -11939,7 +11939,7 @@ export interface operations {
            *       "https://example.com/image1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /**
            * @example [
            *       "hiking",
@@ -11947,7 +11947,7 @@ export interface operations {
            *       "adventure"
            *     ]
            */
-          tags?: string[]
+          tags?: Array<string>
         }
       }
     }
@@ -12296,7 +12296,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439011"
            *     ]
            */
-          cohosts?: string[]
+          cohosts?: Array<string>
           location?: {
             /** @example 123 Main St */
             address?: string
@@ -12309,7 +12309,7 @@ export interface operations {
                *       40.73061
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
             /** @example New York */
             city?: string
@@ -12326,12 +12326,12 @@ export interface operations {
              * @example 6
              */
             day: number
-            times: {
+            times: Array<{
               /** @example 09:00 */
               startTime: string
               /** @example 17:00 */
               endTime: string
-            }[]
+            }>
           }
           /**
            * @description Duration in minutes
@@ -12367,7 +12367,7 @@ export interface operations {
            *       "https://example.com/image1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /**
            * @example [
            *       "hiking",
@@ -12375,7 +12375,7 @@ export interface operations {
            *       "adventure"
            *     ]
            */
-          tags?: string[]
+          tags?: Array<string>
           /**
            * @description Activity status
            * @default Draft
@@ -12414,7 +12414,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439011"
            *     ]
            */
-          cohosts?: string[]
+          cohosts?: Array<string>
           location?: {
             /** @example 123 Main St */
             address?: string
@@ -12427,7 +12427,7 @@ export interface operations {
                *       40.73061
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
             /** @example New York */
             city?: string
@@ -12444,12 +12444,12 @@ export interface operations {
              * @example 6
              */
             day: number
-            times: {
+            times: Array<{
               /** @example 09:00 */
               startTime: string
               /** @example 17:00 */
               endTime: string
-            }[]
+            }>
           }
           /**
            * @description Duration in minutes
@@ -12485,7 +12485,7 @@ export interface operations {
            *       "https://example.com/image1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /**
            * @example [
            *       "hiking",
@@ -12493,7 +12493,7 @@ export interface operations {
            *       "adventure"
            *     ]
            */
-          tags?: string[]
+          tags?: Array<string>
           /**
            * @description Activity status
            * @default Draft
@@ -12532,7 +12532,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439011"
            *     ]
            */
-          cohosts?: string[]
+          cohosts?: Array<string>
           location?: {
             /** @example 123 Main St */
             address?: string
@@ -12545,7 +12545,7 @@ export interface operations {
                *       40.73061
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
             /** @example New York */
             city?: string
@@ -12562,12 +12562,12 @@ export interface operations {
              * @example 6
              */
             day: number
-            times: {
+            times: Array<{
               /** @example 09:00 */
               startTime: string
               /** @example 17:00 */
               endTime: string
-            }[]
+            }>
           }
           /**
            * @description Duration in minutes
@@ -12603,7 +12603,7 @@ export interface operations {
            *       "https://example.com/image1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /**
            * @example [
            *       "hiking",
@@ -12611,7 +12611,7 @@ export interface operations {
            *       "adventure"
            *     ]
            */
-          tags?: string[]
+          tags?: Array<string>
           /**
            * @description Activity status
            * @default Draft
@@ -12954,20 +12954,20 @@ export interface operations {
               | 'Cancelled'
               | 'Suspended'
             )
-          | (
+          | Array<
               | 'Draft'
               | 'Active'
               | 'In Progress'
               | 'Completed'
               | 'Cancelled'
               | 'Suspended'
-            )[]
+            >
         /** @description Privacy setting filter */
         privacy?:
           | ('Public' | 'Private' | 'Friends Only')
-          | ('Public' | 'Private' | 'Friends Only')[]
+          | Array<'Public' | 'Private' | 'Friends Only'>
         /** @description Tags filter */
-        tags?: string | string[]
+        tags?: string | Array<string>
         /** @description Minimum budget amount */
         minBudget?: number
         /** @description Maximum budget amount */
@@ -13160,20 +13160,20 @@ export interface operations {
               | 'Cancelled'
               | 'Suspended'
             )
-          | (
+          | Array<
               | 'Draft'
               | 'Active'
               | 'In Progress'
               | 'Completed'
               | 'Cancelled'
               | 'Suspended'
-            )[]
+            >
         /** @description Privacy setting filter */
         privacy?:
           | ('Public' | 'Private' | 'Friends Only')
-          | ('Public' | 'Private' | 'Friends Only')[]
+          | Array<'Public' | 'Private' | 'Friends Only'>
         /** @description Tags filter */
-        tags?: string | string[]
+        tags?: string | Array<string>
         /** @description Start date for filtering (ISO format) */
         startDate?: string
         /** @description End date for filtering (ISO format) */
@@ -14479,7 +14479,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439014"
            *     ]
            */
-          cohosts?: string[]
+          cohosts?: Array<string>
           /** @example 507f1f77bcf86cd799439015 */
           parentActivity?: string
           location?: {
@@ -14494,7 +14494,7 @@ export interface operations {
                *       -80.1918
                *     ]
                */
-              coordinates: number[]
+              coordinates: Array<number>
             }
             /** @example Miami */
             city?: string
@@ -14539,7 +14539,7 @@ export interface operations {
            *       "https://example.com/beach2.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /**
            * @example [
            *       "beach",
@@ -14548,7 +14548,7 @@ export interface operations {
            *       "adventure"
            *     ]
            */
-          tags?: string[]
+          tags?: Array<string>
           /**
            * @default Draft
            * @example Active
@@ -14569,7 +14569,7 @@ export interface operations {
              *       "Non-binary"
              *     ]
              */
-            allowedGenders?: string[]
+            allowedGenders?: Array<string>
             /** @example 18 */
             minAge?: number
             /** @example 45 */
@@ -14603,7 +14603,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439014"
            *     ]
            */
-          cohosts?: string[]
+          cohosts?: Array<string>
           /** @example 507f1f77bcf86cd799439015 */
           parentActivity?: string
           location?: {
@@ -14618,7 +14618,7 @@ export interface operations {
                *       -80.1918
                *     ]
                */
-              coordinates: number[]
+              coordinates: Array<number>
             }
             /** @example Miami */
             city?: string
@@ -14663,7 +14663,7 @@ export interface operations {
            *       "https://example.com/beach2.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /**
            * @example [
            *       "beach",
@@ -14672,7 +14672,7 @@ export interface operations {
            *       "adventure"
            *     ]
            */
-          tags?: string[]
+          tags?: Array<string>
           /**
            * @default Draft
            * @example Active
@@ -14693,7 +14693,7 @@ export interface operations {
              *       "Non-binary"
              *     ]
              */
-            allowedGenders?: string[]
+            allowedGenders?: Array<string>
             /** @example 18 */
             minAge?: number
             /** @example 45 */
@@ -14727,7 +14727,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439014"
            *     ]
            */
-          cohosts?: string[]
+          cohosts?: Array<string>
           /** @example 507f1f77bcf86cd799439015 */
           parentActivity?: string
           location?: {
@@ -14742,7 +14742,7 @@ export interface operations {
                *       -80.1918
                *     ]
                */
-              coordinates: number[]
+              coordinates: Array<number>
             }
             /** @example Miami */
             city?: string
@@ -14787,7 +14787,7 @@ export interface operations {
            *       "https://example.com/beach2.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /**
            * @example [
            *       "beach",
@@ -14796,7 +14796,7 @@ export interface operations {
            *       "adventure"
            *     ]
            */
-          tags?: string[]
+          tags?: Array<string>
           /**
            * @default Draft
            * @example Active
@@ -14817,7 +14817,7 @@ export interface operations {
              *       "Non-binary"
              *     ]
              */
-            allowedGenders?: string[]
+            allowedGenders?: Array<string>
             /** @example 18 */
             minAge?: number
             /** @example 45 */
@@ -15292,7 +15292,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439014"
            *     ]
            */
-          cohosts?: string[]
+          cohosts?: Array<string>
           /** @example 507f1f77bcf86cd799439015 */
           parentActivity?: string
           location?: {
@@ -15307,7 +15307,7 @@ export interface operations {
                *       -80.1918
                *     ]
                */
-              coordinates: number[]
+              coordinates: Array<number>
             }
             /** @example Miami */
             city?: string
@@ -15352,7 +15352,7 @@ export interface operations {
            *       "https://example.com/beach2.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /**
            * @example [
            *       "beach",
@@ -15361,7 +15361,7 @@ export interface operations {
            *       "adventure"
            *     ]
            */
-          tags?: string[]
+          tags?: Array<string>
           preferences?: {
             /**
              * @example [
@@ -15370,7 +15370,7 @@ export interface operations {
              *       "Non-binary"
              *     ]
              */
-            allowedGenders?: string[]
+            allowedGenders?: Array<string>
             /** @example 18 */
             minAge?: number
             /** @example 45 */
@@ -15404,7 +15404,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439014"
            *     ]
            */
-          cohosts?: string[]
+          cohosts?: Array<string>
           /** @example 507f1f77bcf86cd799439015 */
           parentActivity?: string
           location?: {
@@ -15419,7 +15419,7 @@ export interface operations {
                *       -80.1918
                *     ]
                */
-              coordinates: number[]
+              coordinates: Array<number>
             }
             /** @example Miami */
             city?: string
@@ -15464,7 +15464,7 @@ export interface operations {
            *       "https://example.com/beach2.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /**
            * @example [
            *       "beach",
@@ -15473,7 +15473,7 @@ export interface operations {
            *       "adventure"
            *     ]
            */
-          tags?: string[]
+          tags?: Array<string>
           preferences?: {
             /**
              * @example [
@@ -15482,7 +15482,7 @@ export interface operations {
              *       "Non-binary"
              *     ]
              */
-            allowedGenders?: string[]
+            allowedGenders?: Array<string>
             /** @example 18 */
             minAge?: number
             /** @example 45 */
@@ -15516,7 +15516,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439014"
            *     ]
            */
-          cohosts?: string[]
+          cohosts?: Array<string>
           /** @example 507f1f77bcf86cd799439015 */
           parentActivity?: string
           location?: {
@@ -15531,7 +15531,7 @@ export interface operations {
                *       -80.1918
                *     ]
                */
-              coordinates: number[]
+              coordinates: Array<number>
             }
             /** @example Miami */
             city?: string
@@ -15576,7 +15576,7 @@ export interface operations {
            *       "https://example.com/beach2.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
           /**
            * @example [
            *       "beach",
@@ -15585,7 +15585,7 @@ export interface operations {
            *       "adventure"
            *     ]
            */
-          tags?: string[]
+          tags?: Array<string>
           preferences?: {
             /**
              * @example [
@@ -15594,7 +15594,7 @@ export interface operations {
              *       "Non-binary"
              *     ]
              */
-            allowedGenders?: string[]
+            allowedGenders?: Array<string>
             /** @example 18 */
             minAge?: number
             /** @example 45 */
@@ -15989,7 +15989,7 @@ export interface operations {
              *       -80.1918
              *     ]
              */
-            coordinates: number[]
+            coordinates: Array<number>
           }
           /** @example 1 */
           page?: number
@@ -16008,7 +16008,7 @@ export interface operations {
              *       -80.1918
              *     ]
              */
-            coordinates: number[]
+            coordinates: Array<number>
           }
           /** @example 1 */
           page?: number
@@ -16027,7 +16027,7 @@ export interface operations {
              *       -80.1918
              *     ]
              */
-            coordinates: number[]
+            coordinates: Array<number>
           }
           /** @example 1 */
           page?: number
@@ -17331,11 +17331,11 @@ export interface operations {
         /** @description Category filter */
         category?:
           | ('GIFT' | 'SUBSCRIPTION' | 'LEVEL' | 'BADGE')
-          | ('GIFT' | 'SUBSCRIPTION' | 'LEVEL' | 'BADGE')[]
+          | Array<'GIFT' | 'SUBSCRIPTION' | 'LEVEL' | 'BADGE'>
         /** @description Status filter */
-        status?: ('ACTIVE' | 'DISABLED') | ('ACTIVE' | 'DISABLED')[]
+        status?: ('ACTIVE' | 'DISABLED') | Array<'ACTIVE' | 'DISABLED'>
         /** @description Frequency filter */
-        frequency?: ('ONCE' | 'MONTHLY') | ('ONCE' | 'MONTHLY')[]
+        frequency?: ('ONCE' | 'MONTHLY') | Array<'ONCE' | 'MONTHLY'>
         /** @description Minimum cost */
         minCost?: number
         /** @description Maximum cost */
@@ -19402,7 +19402,7 @@ export interface operations {
            *       "https://example.com/updated-review1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
         }
         'multipart/form-data': {
           /**
@@ -19426,7 +19426,7 @@ export interface operations {
            *       "https://example.com/updated-review1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
         }
         'text/plain': {
           /**
@@ -19450,7 +19450,7 @@ export interface operations {
            *       "https://example.com/updated-review1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
         }
       }
     }
@@ -19966,7 +19966,7 @@ export interface operations {
            *       "Smart"
            *     ]
            */
-          perceptions: (
+          perceptions: Array<
             | 'Kind'
             | 'Friendly'
             | 'Funny'
@@ -19979,7 +19979,7 @@ export interface operations {
             | 'Quiet'
             | 'Shy'
             | 'Bold'
-          )[]
+          >
         }
         'multipart/form-data': {
           /**
@@ -20000,7 +20000,7 @@ export interface operations {
            *       "Smart"
            *     ]
            */
-          perceptions: (
+          perceptions: Array<
             | 'Kind'
             | 'Friendly'
             | 'Funny'
@@ -20013,7 +20013,7 @@ export interface operations {
             | 'Quiet'
             | 'Shy'
             | 'Bold'
-          )[]
+          >
         }
         'text/plain': {
           /**
@@ -20034,7 +20034,7 @@ export interface operations {
            *       "Smart"
            *     ]
            */
-          perceptions: (
+          perceptions: Array<
             | 'Kind'
             | 'Friendly'
             | 'Funny'
@@ -20047,7 +20047,7 @@ export interface operations {
             | 'Quiet'
             | 'Shy'
             | 'Bold'
-          )[]
+          >
         }
       }
     }
@@ -20310,17 +20310,19 @@ export interface operations {
         /** @description Target model filter */
         targetModel?:
           | ('User' | 'Activity' | 'Plan')
-          | ('User' | 'Activity' | 'Plan')[]
+          | Array<'User' | 'Activity' | 'Plan'>
         /** @description Review type filter */
-        type?: ('USER' | 'ACTIVITY' | 'PLAN') | ('USER' | 'ACTIVITY' | 'PLAN')[]
+        type?:
+          | ('USER' | 'ACTIVITY' | 'PLAN')
+          | Array<'USER' | 'ACTIVITY' | 'PLAN'>
         /** @description Reviewer user ID filter */
         reviewer?: string
         /** @description Rating filter */
-        rating?: number | number[]
+        rating?: number | Array<number>
         /** @description Review status filter */
         status?:
           | ('PENDING' | 'PUBLISHED' | 'HIDDEN' | 'DELETED' | 'REJECTED')
-          | ('PENDING' | 'PUBLISHED' | 'HIDDEN' | 'DELETED' | 'REJECTED')[]
+          | Array<'PENDING' | 'PUBLISHED' | 'HIDDEN' | 'DELETED' | 'REJECTED'>
         /** @description Start date for filtering (ISO format) */
         startDate?: string
         /** @description End date for filtering (ISO format) */
@@ -20711,7 +20713,7 @@ export interface operations {
            *       "https://example.com/plan1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
         }
         'multipart/form-data': {
           /**
@@ -20740,7 +20742,7 @@ export interface operations {
            *       "https://example.com/plan1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
         }
         'text/plain': {
           /**
@@ -20769,7 +20771,7 @@ export interface operations {
            *       "https://example.com/plan1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
         }
       }
     }
@@ -21056,7 +21058,7 @@ export interface operations {
            *       "https://example.com/activity1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
         }
         'multipart/form-data': {
           /**
@@ -21085,7 +21087,7 @@ export interface operations {
            *       "https://example.com/activity1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
         }
         'text/plain': {
           /**
@@ -21114,7 +21116,7 @@ export interface operations {
            *       "https://example.com/activity1.jpg"
            *     ]
            */
-          images?: string[]
+          images?: Array<string>
         }
       }
     }
@@ -21397,12 +21399,12 @@ export interface operations {
            *       }
            *     ]
            */
-          gifts?: {
+          gifts?: Array<{
             /** @example 507f1f77bcf86cd799439014 */
             catalogId: string
             /** @example 2 */
             quantity: number
-          }[]
+          }>
           /** @example 507f1f77bcf86cd799439020 */
           connectionId?: string
           /**
@@ -21438,12 +21440,12 @@ export interface operations {
            *       }
            *     ]
            */
-          gifts?: {
+          gifts?: Array<{
             /** @example 507f1f77bcf86cd799439014 */
             catalogId: string
             /** @example 2 */
             quantity: number
-          }[]
+          }>
           /** @example 507f1f77bcf86cd799439020 */
           connectionId?: string
           /**
@@ -21479,12 +21481,12 @@ export interface operations {
            *       }
            *     ]
            */
-          gifts?: {
+          gifts?: Array<{
             /** @example 507f1f77bcf86cd799439014 */
             catalogId: string
             /** @example 2 */
             quantity: number
-          }[]
+          }>
           /** @example 507f1f77bcf86cd799439020 */
           connectionId?: string
           /**
@@ -23570,7 +23572,7 @@ export interface operations {
            *       }
            *     ]
            */
-          media?: {
+          media?: Array<{
             /** @example https://example.com/media/file.jpg */
             url?: string
             /** @example https://example.com/media/thumb.jpg */
@@ -23581,7 +23583,7 @@ export interface operations {
             size?: number
             /** @example image/jpeg */
             mimeType?: string
-          }[]
+          }>
           location?: {
             coordinates?: {
               /** @example Point */
@@ -23592,7 +23594,7 @@ export interface operations {
                *       -74.006
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
             /** @example 123 Main St, New York, NY */
             address?: string
@@ -23621,12 +23623,12 @@ export interface operations {
            *       }
            *     ]
            */
-          gifts?: {
+          gifts?: Array<{
             /** @example 507f1f77bcf86cd799439015 */
             catalogId: string
             /** @example 1 */
             quantity: number
-          }[]
+          }>
         }
         'multipart/form-data': {
           /** @example 507f1f77bcf86cd799439011 */
@@ -23661,7 +23663,7 @@ export interface operations {
            *       }
            *     ]
            */
-          media?: {
+          media?: Array<{
             /** @example https://example.com/media/file.jpg */
             url?: string
             /** @example https://example.com/media/thumb.jpg */
@@ -23672,7 +23674,7 @@ export interface operations {
             size?: number
             /** @example image/jpeg */
             mimeType?: string
-          }[]
+          }>
           location?: {
             coordinates?: {
               /** @example Point */
@@ -23683,7 +23685,7 @@ export interface operations {
                *       -74.006
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
             /** @example 123 Main St, New York, NY */
             address?: string
@@ -23712,12 +23714,12 @@ export interface operations {
            *       }
            *     ]
            */
-          gifts?: {
+          gifts?: Array<{
             /** @example 507f1f77bcf86cd799439015 */
             catalogId: string
             /** @example 1 */
             quantity: number
-          }[]
+          }>
         }
         'text/plain': {
           /** @example 507f1f77bcf86cd799439011 */
@@ -23752,7 +23754,7 @@ export interface operations {
            *       }
            *     ]
            */
-          media?: {
+          media?: Array<{
             /** @example https://example.com/media/file.jpg */
             url?: string
             /** @example https://example.com/media/thumb.jpg */
@@ -23763,7 +23765,7 @@ export interface operations {
             size?: number
             /** @example image/jpeg */
             mimeType?: string
-          }[]
+          }>
           location?: {
             coordinates?: {
               /** @example Point */
@@ -23774,7 +23776,7 @@ export interface operations {
                *       -74.006
                *     ]
                */
-              coordinates?: number[]
+              coordinates?: Array<number>
             }
             /** @example 123 Main St, New York, NY */
             address?: string
@@ -23803,12 +23805,12 @@ export interface operations {
            *       }
            *     ]
            */
-          gifts?: {
+          gifts?: Array<{
             /** @example 507f1f77bcf86cd799439015 */
             catalogId: string
             /** @example 1 */
             quantity: number
-          }[]
+          }>
         }
       }
     }
@@ -25399,7 +25401,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439013"
            *     ]
            */
-          catalogIds: string[]
+          catalogIds: Array<string>
           /** @example Happy birthday! 🎉 */
           message?: string
         }
@@ -25412,7 +25414,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439013"
            *     ]
            */
-          catalogIds: string[]
+          catalogIds: Array<string>
           /** @example Happy birthday! 🎉 */
           message?: string
         }
@@ -25425,7 +25427,7 @@ export interface operations {
            *       "507f1f77bcf86cd799439013"
            *     ]
            */
-          catalogIds: string[]
+          catalogIds: Array<string>
           /** @example Happy birthday! 🎉 */
           message?: string
         }
