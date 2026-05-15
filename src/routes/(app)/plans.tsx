@@ -44,7 +44,7 @@ import {
 } from '@/components/ui/combobox'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { PlansTable } from '@/components/plans-table'
-import { searchPlansOptions } from '@/queries/plans'
+import { getPlanCategoriesOptions, searchPlansOptions } from '@/queries/plans'
 import { getUserByIdOptions, searchUserOptions } from '@/queries/users'
 
 export const planSearchSchema = z.object({
@@ -65,6 +65,7 @@ export const planSearchSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   creator: z.string().optional(),
+  categoryId: z.coerce.number().optional(),
 })
 
 function searchToParams(
@@ -80,6 +81,7 @@ function searchToParams(
   if (search.status) params.status = search.status as PlanStatusFilter
   if (search.startDate) params.startDate = search.startDate
   if (search.endDate) params.endDate = search.endDate
+  if (search.categoryId) params.categoryId = search.categoryId
 
   return params
 }
@@ -169,6 +171,8 @@ function PlansPage() {
     enabled: !!userSearchParams?.query,
   })
 
+  const { data: categoriesData } = useQuery(getPlanCategoriesOptions())
+
   const plans = (data?.data?.plans as Array<any>) ?? []
   const pagination = data?.data?.pagination
   const totalPlans = pagination?.totalItems ?? 0
@@ -231,6 +235,7 @@ function PlansPage() {
     status?: PlanStatusFilter | ''
     startDate?: string
     endDate?: string
+    categoryId?: number | ''
   }) => {
     navigate({
       search: (prev) => ({
@@ -245,6 +250,9 @@ function PlansPage() {
         }),
         ...(patch.endDate !== undefined && {
           endDate: patch.endDate || undefined,
+        }),
+        ...(patch.categoryId !== undefined && {
+          categoryId: patch.categoryId || undefined,
         }),
       }),
       replace: true,
@@ -261,6 +269,7 @@ function PlansPage() {
         startDate: undefined,
         endDate: undefined,
         creator: undefined,
+        categoryId: undefined,
       }),
       replace: true,
     })
@@ -417,6 +426,37 @@ function PlansPage() {
                         </Select>
                       </div>
 
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium text-muted-foreground">
+                          Category
+                        </Label>
+                        <Select
+                          value={search.categoryId?.toString() ?? ''}
+                          onValueChange={(value) =>
+                            handleFilterChange({
+                              categoryId: value ? Number(value) : '',
+                            })
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-full text-xs">
+                            <SelectValue placeholder="All" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">All</SelectItem>
+                            {categoriesData?.data?.categories?.map(
+                              (cat: any) => (
+                                <SelectItem
+                                  key={cat.id}
+                                  value={cat.id.toString()}
+                                >
+                                  {cat.category_name}
+                                </SelectItem>
+                              ),
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
                       <div className="flex justify-end pt-1">
                         <Button
                           variant="ghost"
@@ -427,7 +467,8 @@ function PlansPage() {
                             !search.type &&
                             !search.status &&
                             !search.startDate &&
-                            !search.endDate
+                            !search.endDate &&
+                            !search.categoryId
                           }
                         >
                           Clear filters

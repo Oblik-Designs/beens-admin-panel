@@ -21,15 +21,13 @@ export const login = createServerFn({
     }
 
     const url = new URL('/v1/auth/verify-password', apiBaseUrl)
-    url.searchParams.set('email', email)
-    url.searchParams.set('password', password)
-    url.searchParams.set('purpose', 'AUTH')
 
     const response = await fetch(url.toString(), {
-      method: 'GET',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify({ email, password, purpose: 'AUTH' }),
     })
 
     if (!response.ok) {

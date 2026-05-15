@@ -89,6 +89,20 @@ export const planColumns: Array<ColumnDef<Plan>> = [
     meta: { className: 'max-w-[220px] truncate px-4' },
   },
   {
+    id: 'category',
+    header: 'Category',
+    cell: ({ row }) => {
+      const name = row.original.category?.category_name
+      return name ? (
+        <Badge variant="secondary" className="text-[11px] px-1.5">
+          {name}
+        </Badge>
+      ) : (
+        <span className="text-muted-foreground">-</span>
+      )
+    },
+  },
+  {
     accessorKey: 'status',
     header: 'Status',
     cell: ({ row }) => (

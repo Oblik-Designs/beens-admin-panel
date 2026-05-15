@@ -362,6 +362,12 @@ export function PlansTable({
               </div>
               <div className="space-y-1 text-sm">
                 <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">Category</span>
+                  <span className="font-medium">
+                    {plan.category?.category_name ?? '-'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
                   <span className="text-muted-foreground">Type</span>
                   <span className="font-medium">{plan.type ?? '-'}</span>
                 </div>

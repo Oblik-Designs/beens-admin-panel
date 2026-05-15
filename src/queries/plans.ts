@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { PlanSearchParams } from '@/server/api/plans'
-import { getPlanById, searchPlans } from '@/server/api/plans'
+import { getPlanById, getPlanCategories, searchPlans } from '@/server/api/plans'
 
 export const searchPlansOptions = (params?: PlanSearchParams) =>
   queryOptions({
@@ -18,4 +18,13 @@ export const getPlanByIdOptions = (planId: string) =>
       // @ts-expect-error - createServerFn types don't properly reflect GET data parameter
       return await getPlanById({ data: { planId } })
     },
+  })
+
+export const getPlanCategoriesOptions = () =>
+  queryOptions({
+    queryKey: ['plan-categories'],
+    queryFn: async () => {
+      return await getPlanCategories()
+    },
+    staleTime: Infinity,
   })

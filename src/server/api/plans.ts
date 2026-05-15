@@ -29,6 +29,17 @@ export interface PlanBudget {
   currency: string
 }
 
+export interface PlanCategory {
+  _id: string
+  id: number
+  category_name: string
+  sub_description: string[]
+  description: string
+  status: 'ACTIVE' | 'DISABLED'
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Plan {
   _id: string
   title: string
@@ -38,6 +49,7 @@ export interface Plan {
   creator: PlanCreator
   cohosts: Array<any>
   status: string
+  category?: PlanCategory
   location: PlanLocation
   startDate: string
   endDate: string
@@ -48,7 +60,7 @@ export interface Plan {
   currentParticipants: Array<string>
   budget: PlanBudget
   primaryImage: string
-  tags: Array<string>
+  images?: Array<string>
   views: number
   createdAt: string
   isFull: boolean
@@ -81,6 +93,14 @@ export interface PlanSearchParams {
   status?: PlanStatusFilter
   startDate?: string
   endDate?: string
+  categoryId?: number
+}
+
+export interface PlanCategoriesResponse {
+  status: string
+  data: {
+    categories: Array<PlanCategory>
+  }
 }
 
 export interface PlanSearchResponse {
@@ -117,5 +137,12 @@ export const getPlanById = createServerFn({
     throw new Error('Plan ID is required')
   }
   const result = await apiClient.get<PlanByIdResponse>(`/plans/${planId}`)
+  return result
+})
+
+export const getPlanCategories = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  const result = await apiClient.get<PlanCategoriesResponse>('/plan-categories')
   return result
 })
