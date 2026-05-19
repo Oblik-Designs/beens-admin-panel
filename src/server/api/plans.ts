@@ -32,8 +32,8 @@ export interface PlanBudget {
 export interface PlanCategory {
   _id: string
   id: number
-  category_name: string
-  sub_description: string[]
+  name: string
+  subDescription: string[]
   description: string
   status: 'ACTIVE' | 'DISABLED'
   createdAt: string
@@ -60,6 +60,7 @@ export interface Plan {
   currentParticipants: Array<string>
   budget: PlanBudget
   primaryImage: string
+  tags: Array<string>
   images?: Array<string>
   views: number
   createdAt: string

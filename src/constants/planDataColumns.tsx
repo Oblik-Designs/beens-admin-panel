@@ -92,7 +92,7 @@ export const planColumns: Array<ColumnDef<Plan>> = [
     id: 'category',
     header: 'Category',
     cell: ({ row }) => {
-      const name = row.original.category?.category_name
+      const name = row.original.category?.name
       return name ? (
         <Badge variant="secondary" className="text-[11px] px-1.5">
           {name}

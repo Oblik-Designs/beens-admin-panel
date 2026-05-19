@@ -364,7 +364,7 @@ export function PlansTable({
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-muted-foreground">Category</span>
                   <span className="font-medium">
-                    {plan.category?.category_name ?? '-'}
+                    {plan.category?.name ?? '-'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
