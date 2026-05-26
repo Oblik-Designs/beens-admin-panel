@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type { User } from '@/constants/userDataColumns'
-import type { UserUpdatePayload } from '@/server/api/users'
+import type { UserKycUpdate, UserUpdatePayload } from '@/server/api/users'
 import { getUserByIdOptions, updateUserOptions } from '@/queries/users'
 import { Button } from '@/components/ui/button'
 import { DetailSheet } from '@/components/detail-sheet'
@@ -19,6 +19,16 @@ type UserSheetProps = {
   onOpenChange: (open: boolean) => void
   user?: User | null
   userId?: string | null
+}
+
+const KYC_STATUS_TO_VERIFICATION_STATUS: Record<
+  NonNullable<User['kyc']>['status'],
+  NonNullable<UserKycUpdate['verificationStatus']>
+> = {
+  NOT_STARTED: 'UNVERIFIED',
+  PENDING: 'PENDING',
+  APPROVED: 'VERIFIED',
+  REJECTED: 'REJECTED',
 }
 
 export function UserSheet({
@@ -73,7 +83,9 @@ export function UserSheet({
 
     if (kycStatus && kycStatus?.status !== user.kyc?.status) {
       payload.kyc = {
-        status: kycStatus?.status,
+        status: kycStatus.status,
+        verificationStatus:
+          KYC_STATUS_TO_VERIFICATION_STATUS[kycStatus.status],
       }
     }
 
