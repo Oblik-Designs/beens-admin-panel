@@ -119,3 +119,35 @@ export const getPlanById = createServerFn({
   const result = await apiClient.get<PlanByIdResponse>(`/plans/${planId}`)
   return result
 })
+
+export interface SuspendAndRefundPlanParams {
+  planId: string
+  reason: string
+}
+
+export interface SuspendAndRefundPlanResponse {
+  success: boolean
+  data: {
+    planId: string
+    status: string
+    reason: string
+    refundedTransactionIds: Array<string>
+  }
+}
+
+export const suspendAndRefundPlan = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const params = ctx.data as SuspendAndRefundPlanParams | undefined
+  if (!params?.planId) {
+    throw new Error('Plan ID is required')
+  }
+  if (!params.reason || params.reason.trim().length === 0) {
+    throw new Error('Reason is required')
+  }
+  const result = await apiClient.post<SuspendAndRefundPlanResponse>(
+    `/admin/plans/${params.planId}/suspend-and-refund`,
+    { reason: params.reason },
+  )
+  return result
+})

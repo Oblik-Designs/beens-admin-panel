@@ -234,8 +234,6 @@ function TicketsPage() {
     if (!open) setSelectedTicket(null)
   }, [])
 
-  console.log('tickets: ', tickets)
-
   return (
     <SidebarProvider
       style={

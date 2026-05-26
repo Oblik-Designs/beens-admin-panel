@@ -107,23 +107,31 @@ export function TableWithPagination<TData>({
           <TableHeader className="bg-muted sticky top-0 z-10">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    colSpan={header.colSpan}
-                    className={`first-of-type:px-6 ${
-                      (header.column.columnDef.meta as { className?: string })
-                        ?.className ?? ''
-                    }`.trim()}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const colMeta = header.column.columnDef.meta as
+                    | { className?: string; sticky?: 'right' }
+                    | undefined
+                  const stickyClasses =
+                    colMeta?.sticky === 'right'
+                      ? 'sticky right-0 z-20 bg-muted shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.12)]'
+                      : ''
+                  return (
+                    <TableHead
+                      key={header.id}
+                      colSpan={header.colSpan}
+                      className={`first-of-type:px-6 ${stickyClasses} ${
+                        colMeta?.className ?? ''
+                      }`.trim()}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                    </TableHead>
+                  )
+                })}
               </TableRow>
             ))}
           </TableHeader>
@@ -131,21 +139,29 @@ export function TableWithPagination<TData>({
           <TableBody className="**:data-[slot=table-cell]:first:w-8">
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={
-                        (cell.column.columnDef.meta as { className?: string })
-                          ?.className
-                      }
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
-                  ))}
+                <TableRow key={row.id} className="group">
+                  {row.getVisibleCells().map((cell) => {
+                    const colMeta = cell.column.columnDef.meta as
+                      | { className?: string; sticky?: 'right' }
+                      | undefined
+                    const stickyClasses =
+                      colMeta?.sticky === 'right'
+                        ? 'sticky right-0 z-10 bg-background group-hover:bg-muted/50 shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.08)]'
+                        : ''
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        className={`${stickyClasses} ${
+                          colMeta?.className ?? ''
+                        }`.trim()}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               ))
             ) : (

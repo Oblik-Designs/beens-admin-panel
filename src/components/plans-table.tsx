@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { CalendarIcon, MapPinIcon, UserIcon } from 'lucide-react'
 
@@ -9,7 +9,22 @@ import { DetailSheet } from '@/components/detail-sheet'
 import { TableWithPagination } from '@/components/table-with-pagination'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getUserByIdOptions } from '@/queries/users'
-import { getPlanByIdOptions } from '@/queries/plans'
+import {
+  getPlanByIdOptions,
+  suspendAndRefundPlanOptions,
+} from '@/queries/plans'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 
 type UserDetail = {
   _id?: string
@@ -84,6 +99,29 @@ export function PlansTable({
     null,
   )
 
+  const [pendingSuspend, setPendingSuspend] = React.useState<Plan | null>(null)
+  const [suspendReason, setSuspendReason] = React.useState('')
+  const [suspendError, setSuspendError] = React.useState<string | null>(null)
+
+  const queryClient = useQueryClient()
+
+  const suspendMutation = useMutation({
+    ...suspendAndRefundPlanOptions(pendingSuspend?._id ?? ''),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] })
+      setPendingSuspend(null)
+      setSuspendReason('')
+      setSuspendError(null)
+    },
+    onError: (error: unknown) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to suspend and refund the plan.'
+      setSuspendError(message)
+    },
+  })
+
   const { data: userResponse, isLoading: isUserLoading } = useQuery({
     ...getUserByIdOptions(selectedCreatorId),
     enabled: sheetOpen && !!selectedCreatorId,
@@ -124,6 +162,32 @@ export function PlansTable({
     }
   }, [])
 
+  const handleSuspendPlan = React.useCallback((plan: Plan) => {
+    setSuspendError(null)
+    setSuspendReason('')
+    setPendingSuspend(plan)
+  }, [])
+
+  const handleCancelSuspend = React.useCallback(() => {
+    if (suspendMutation.isPending) return
+    setPendingSuspend(null)
+    setSuspendReason('')
+    setSuspendError(null)
+  }, [suspendMutation.isPending])
+
+  const handleConfirmSuspend = React.useCallback(() => {
+    if (!pendingSuspend) return
+    const trimmed = suspendReason.trim()
+    if (!trimmed) {
+      setSuspendError('Please provide a reason for the suspension.')
+      return
+    }
+    setSuspendError(null)
+    suspendMutation.mutate(trimmed)
+  }, [pendingSuspend, suspendReason, suspendMutation])
+
+  const pendingSuspendTitle = pendingSuspend?.title || pendingSuspend?._id || ''
+
   const fullName =
     user?.displayName ||
     [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() ||
@@ -143,6 +207,7 @@ export function PlansTable({
         meta={{
           onCreatorClick: handleCreatorClick,
           onViewPlan: handleViewPlan,
+          onSuspendPlan: handleSuspendPlan,
         }}
         emptyMessage="No plans found."
         loadingMessage="Loading plans data..."
@@ -388,6 +453,57 @@ export function PlansTable({
           </div>
         )}
       </DetailSheet>
+
+      <AlertDialog
+        open={!!pendingSuspend}
+        onOpenChange={(open) => {
+          if (!open) handleCancelSuspend()
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Suspend &amp; refund this plan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingSuspendTitle
+                ? `"${pendingSuspendTitle}" will be suspended and all participant payments will be refunded to their wallets. This cannot be undone automatically.`
+                : 'This plan will be suspended and all participant payments will be refunded.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="suspend-reason" className="text-xs">
+              Reason (shared with the creator)
+            </Label>
+            <Textarea
+              id="suspend-reason"
+              value={suspendReason}
+              onChange={(event) => setSuspendReason(event.target.value)}
+              placeholder="Explain why this plan is being suspended..."
+              maxLength={1000}
+              disabled={suspendMutation.isPending}
+              className="min-h-24 text-sm"
+            />
+          </div>
+          {suspendError && (
+            <p className="text-destructive text-sm">{suspendError}</p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={suspendMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleConfirmSuspend}
+              disabled={
+                suspendMutation.isPending || !suspendReason.trim()
+              }
+            >
+              {suspendMutation.isPending
+                ? 'Suspending...'
+                : 'Suspend & Refund'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

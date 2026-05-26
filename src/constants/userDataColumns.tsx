@@ -140,6 +140,7 @@ export const userColumns: Array<ColumnDef<User>> = [
   {
     id: 'actions',
     header: 'Actions',
+    meta: { sticky: 'right' },
     cell: ({ row, table }) => {
       const onViewUser = (
         table.options.meta as {
@@ -154,7 +155,7 @@ export const userColumns: Array<ColumnDef<User>> = [
         }
       )?.onDeleteUser
       return (
-        <div className="flex justify-start gap-2">
+        <div className="flex items-center justify-start gap-1.5">
           <Button
             type="button"
             variant="outline"
@@ -166,9 +167,9 @@ export const userColumns: Array<ColumnDef<User>> = [
           </Button>
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="h-7 px-2 text-[11px] text-destructive cursor-pointer"
+            className="h-7 px-2 text-[11px] text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 cursor-pointer"
             onClick={() => onDeleteUser?.(row.original)}
             disabled={!onDeleteUser}
           >

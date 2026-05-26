@@ -1,6 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
 import { apiClient } from '../client'
-import { useAppSession } from '../session'
 
 export interface TicketUserSummary {
   _id: string
@@ -151,13 +150,7 @@ export interface TicketSearchResponse {
 export const searchTickets = createServerFn({
   method: 'POST',
 }).handler(async (ctx) => {
-  const data = ctx.data as TicketSearchParams | undefined
-  const session = await useAppSession()
-  const currentUserId = session.data?.user?._id
-  const params: TicketSearchParams = {
-    ...data,
-    ...(currentUserId && { assignedTo: currentUserId }),
-  }
+  const params = (ctx.data as TicketSearchParams | undefined) ?? {}
   const result = await apiClient.post<TicketSearchResponse>(
     '/tickets/search',
     params,

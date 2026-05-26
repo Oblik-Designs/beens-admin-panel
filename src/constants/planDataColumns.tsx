@@ -176,12 +176,17 @@ export const planColumns: Array<ColumnDef<Plan>> = [
   {
     id: 'actions',
     header: 'Actions',
+    meta: { sticky: 'right' },
     cell: ({ row, table }) => {
-      const onViewPlan = (
-        table.options.meta as {
-          onViewPlan?: (planId: string) => void
-        }
-      )?.onViewPlan
+      const meta = table.options.meta as
+        | {
+            onViewPlan?: (planId: string) => void
+            onSuspendPlan?: (plan: Plan) => void
+          }
+        | undefined
+      const onViewPlan = meta?.onViewPlan
+      const onSuspendPlan = meta?.onSuspendPlan
+      const isSuspended = row.original.status === 'Suspended'
 
       const handleView = (event: React.MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation()
@@ -190,17 +195,45 @@ export const planColumns: Array<ColumnDef<Plan>> = [
         }
       }
 
+      const handleSuspend = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation()
+        if (onSuspendPlan) {
+          onSuspendPlan(row.original)
+        }
+      }
+
       return (
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-7 px-2 text-[11px] cursor-pointer"
-          onClick={handleView}
-          disabled={!onViewPlan}
-        >
-          View
-        </Button>
+        <div className="flex items-center justify-start gap-1.5">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-[11px] cursor-pointer"
+            onClick={handleView}
+            disabled={!onViewPlan}
+          >
+            View
+          </Button>
+          {isSuspended ? (
+            <Badge
+              variant="outline"
+              className="h-7 px-2 text-[11px] font-medium text-destructive border-destructive/30 bg-destructive/5"
+            >
+              Suspended
+            </Badge>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-[11px] text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 cursor-pointer"
+              onClick={handleSuspend}
+              disabled={!onSuspendPlan}
+            >
+              Suspend
+            </Button>
+          )}
+        </div>
       )
     },
   },

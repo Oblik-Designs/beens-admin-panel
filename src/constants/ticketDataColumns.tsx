@@ -167,6 +167,7 @@ export const ticketColumns: Array<ColumnDef<Ticket>> = [
   {
     id: 'actions',
     header: 'Actions',
+    meta: { sticky: 'right' },
     cell: ({ row, table }) => {
       const onViewTicketActions = (
         table.options.meta as { onViewTicketActions?: (ticket: Ticket) => void }
