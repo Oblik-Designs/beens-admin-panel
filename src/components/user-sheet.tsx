@@ -5,6 +5,7 @@ import type { User } from '@/constants/userDataColumns'
 import type { UserKycUpdate, UserUpdatePayload } from '@/server/api/users'
 import { getUserByIdOptions, updateUserOptions } from '@/queries/users'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import { DetailSheet } from '@/components/detail-sheet'
 import {
   Select,
@@ -48,14 +49,17 @@ export function UserSheet({
 
   const [status, setStatus] = React.useState<string>('')
   const [kycStatus, setKycStatus] = React.useState<User['kyc'] | ''>('')
+  const [permanentElite, setPermanentElite] = React.useState<boolean>(false)
 
   React.useEffect(() => {
     if (user) {
       setStatus(user.status ?? '')
       setKycStatus(user.kyc ?? '')
+      setPermanentElite(!!user.permanentElite)
     } else {
       setStatus('')
       setKycStatus('')
+      setPermanentElite(false)
     }
   }, [user])
 
@@ -70,7 +74,8 @@ export function UserSheet({
   const hasChanges =
     !!user &&
     ((status && status !== user.status) ||
-      (kycStatus && kycStatus?.status !== user.kyc?.status))
+      (kycStatus && kycStatus?.status !== user.kyc?.status) ||
+      permanentElite !== !!user.permanentElite)
 
   const handleSave = () => {
     if (!user || !hasChanges) return
@@ -87,6 +92,10 @@ export function UserSheet({
         verificationStatus:
           KYC_STATUS_TO_VERIFICATION_STATUS[kycStatus.status],
       }
+    }
+
+    if (permanentElite !== !!user.permanentElite) {
+      payload.permanentElite = permanentElite
     }
 
     if (Object.keys(payload).length === 0) return
@@ -216,6 +225,17 @@ export function UserSheet({
                     </SelectContent>
                   </Select>
                 </span>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">
+                  Make permanent elite
+                </span>
+                <Switch
+                  checked={permanentElite}
+                  onCheckedChange={(checked) => setPermanentElite(checked)}
+                  disabled={mutation.isPending}
+                />
               </div>
             </div>
           </div>

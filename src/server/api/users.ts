@@ -134,6 +134,7 @@ export interface UserUpdatePayload {
   subscriptionStart?: string
   subscriptionEnd?: string
   wallet?: number
+  permanentElite?: boolean
   kyc?: UserKycUpdate
   preferences?: UserPreferencesUpdate
 }

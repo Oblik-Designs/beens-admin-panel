@@ -30,6 +30,7 @@ export type User = {
   }
   totalPlans?: number
   profileImage?: string
+  permanentElite?: boolean
 }
 
 export const userColumns: Array<ColumnDef<User>> = [
