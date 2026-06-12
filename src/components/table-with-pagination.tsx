@@ -1,5 +1,6 @@
 'use client'
 
+import * as React from 'react'
 import {
   flexRender,
   getCoreRowModel,
@@ -43,6 +44,7 @@ export type TableWithPaginationProps<TData> = {
   onPageSizeChange: (pageSize: number) => void
   meta?: TableMeta<TData>
   emptyMessage?: string
+  emptyAction?: React.ReactNode
   loadingMessage?: string
   isLoading?: boolean
 }
@@ -58,6 +60,7 @@ export function TableWithPagination<TData>({
   onPageSizeChange,
   meta,
   emptyMessage = 'No results found.',
+  emptyAction,
   loadingMessage = 'Loading...',
   isLoading = false,
 }: TableWithPaginationProps<TData>) {
@@ -170,7 +173,12 @@ export function TableWithPagination<TData>({
                   colSpan={table.getAllColumns().length}
                   className="h-24 text-center"
                 >
-                  {emptyMessage}
+                  <div className="flex flex-col items-center justify-center gap-1">
+                    <span className="text-muted-foreground text-sm">
+                      {emptyMessage}
+                    </span>
+                    {emptyAction}
+                  </div>
                 </TableCell>
               </TableRow>
             )}

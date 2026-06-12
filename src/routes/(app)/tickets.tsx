@@ -12,6 +12,9 @@ import {
 
 import type { Ticket, TicketSearchParams } from '@/server/api/tickets'
 import type { UserSearchParams } from '@/server/api/users'
+import type { FilterChip } from '@/components/admin/filter-chips'
+import { FilterChips } from '@/components/admin/filter-chips'
+import { ListMetaBar } from '@/components/admin/list-meta-bar'
 import {
   Combobox,
   ComboboxContent,
@@ -24,6 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -41,6 +45,10 @@ import {
 import { TicketActionSheet } from '@/components/ticket-action-sheet'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { TicketsTable } from '@/components/tickets-table'
+import {
+  getStoredPageSize,
+  setStoredPageSize,
+} from '@/lib/page-size-preference'
 import { searchTicketsOptions } from '@/queries/tickets'
 import { getUserByIdOptions, searchUserOptions } from '@/queries/users'
 
@@ -72,6 +80,60 @@ function searchToParams(
   return params
 }
 
+type TicketSearch = z.infer<typeof ticketSearchSchema>
+
+function countActiveFilters(search: TicketSearch): number {
+  let count = 0
+  if (search.type) count++
+  if (search.status) count++
+  if (search.priority) count++
+  if (search.reporter) count++
+  if (search.sortOrder !== 'desc') count++
+  return count
+}
+
+function buildFilterChips(
+  search: TicketSearch,
+  reporterName: string | undefined,
+  updateSearch: (patch: Partial<TicketSearch>) => void,
+): Array<FilterChip> {
+  const chips: Array<FilterChip> = []
+
+  if (search.reporter) {
+    chips.push({
+      id: 'reporter',
+      label: `Reporter: ${reporterName ?? search.reporter}`,
+      onRemove: () => updateSearch({ reporter: undefined }),
+    })
+  }
+
+  if (search.type) {
+    chips.push({
+      id: 'type',
+      label: `Type: ${search.type}`,
+      onRemove: () => updateSearch({ type: undefined }),
+    })
+  }
+
+  if (search.status) {
+    chips.push({
+      id: 'status',
+      label: `Status: ${search.status}`,
+      onRemove: () => updateSearch({ status: undefined }),
+    })
+  }
+
+  if (search.priority) {
+    chips.push({
+      id: 'priority',
+      label: `Priority: ${search.priority}`,
+      onRemove: () => updateSearch({ priority: undefined }),
+    })
+  }
+
+  return chips
+}
+
 export const Route = createFileRoute('/(app)/tickets')({
   validateSearch: (search) => ticketSearchSchema.parse(search),
   loaderDeps: ({ search }) => search,
@@ -101,6 +163,16 @@ function TicketsPage() {
   React.useEffect(() => {
     setSelectedReporterId(search.reporter ?? '')
   }, [search.reporter])
+
+  React.useEffect(() => {
+    const stored = getStoredPageSize()
+    if (stored !== search.limit) {
+      navigate({
+        search: (prev) => ({ ...prev, limit: stored }),
+        replace: true,
+      })
+    }
+  }, [])
 
   const apiParams = searchToParams(search)
   const { data, isLoading, isFetching } = useQuery(
@@ -139,6 +211,7 @@ function TicketsPage() {
     pagination?.totalPages ??
     (search.limit > 0 ? Math.ceil(totalTickets / search.limit) : 1)
   const pageIndex = search.page - 1
+  const activeFilterCount = countActiveFilters(search)
 
   const handlePageChange = (newPageIndex: number) => {
     navigate({
@@ -151,6 +224,7 @@ function TicketsPage() {
   }
 
   const handlePageSizeChange = (newPageSize: number) => {
+    setStoredPageSize(newPageSize)
     navigate({
       search: (prev) => ({
         ...prev,
@@ -161,26 +235,15 @@ function TicketsPage() {
     })
   }
 
-  const handleFilterChange = (patch: {
-    type?: string | ''
-    status?: string | ''
-    priority?: string | ''
-  }) => {
-    navigate({
-      search: (prev) => ({
-        ...prev,
-        page: 1,
-        ...(patch.type !== undefined && { type: patch.type || undefined }),
-        ...(patch.status !== undefined && {
-          status: patch.status || undefined,
-        }),
-        ...(patch.priority !== undefined && {
-          priority: patch.priority || undefined,
-        }),
-      }),
-      replace: true,
-    })
-  }
+  const updateSearch = React.useCallback(
+    (patch: Partial<TicketSearch>) => {
+      navigate({
+        search: (prev) => ({ ...prev, ...patch, page: 1 }),
+        replace: true,
+      })
+    },
+    [navigate],
+  )
 
   const handleReporterChange = (reporterId: string | null) => {
     setSelectedReporterId(reporterId ?? '')
@@ -211,18 +274,50 @@ function TicketsPage() {
   }
 
   const handleClearFilters = () => {
+    setUserSearchInput('')
+    setSelectedReporterId('')
     navigate({
-      search: (prev) => ({
-        ...prev,
+      search: {
         page: 1,
-        type: undefined,
-        status: undefined,
-        priority: undefined,
-        reporter: undefined,
-      }),
+        limit: search.limit,
+        sortBy: 'priority',
+        sortOrder: 'desc',
+      },
       replace: true,
     })
   }
+
+  const reporterDisplayName =
+    selectedReporterResponse?.data?.displayName ||
+    [
+      selectedReporterResponse?.data?.firstName,
+      selectedReporterResponse?.data?.lastName,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim() ||
+    userSearchInput ||
+    undefined
+
+  const filterChips = buildFilterChips(
+    search,
+    reporterDisplayName,
+    updateSearch,
+  )
+
+  const filtersDisabled = activeFilterCount === 0
+
+  const presets = [
+    {
+      label: 'Open plan reports',
+      onClick: () =>
+        updateSearch({ type: 'REPORT_PLAN', status: 'OPEN' }),
+    },
+    {
+      label: 'High priority',
+      onClick: () => updateSearch({ priority: 'HIGH', status: 'OPEN' }),
+    },
+  ]
 
   const handleViewTicketActions = React.useCallback((ticket: Ticket) => {
     setSelectedTicket(ticket)
@@ -311,7 +406,15 @@ function TicketsPage() {
                       render={<Button variant="outline" size="sm" />}
                     >
                       <SlidersHorizontalIcon className="mr-2 size-4" />
-                      Filters
+                      Filters &amp; sort
+                      {activeFilterCount > 0 && (
+                        <Badge
+                          variant="secondary"
+                          className="ml-2 h-5 min-w-5 px-1.5 text-[10px]"
+                        >
+                          {activeFilterCount}
+                        </Badge>
+                      )}
                       <ChevronDownIcon className="ml-1 size-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -325,9 +428,7 @@ function TicketsPage() {
                         <Select
                           value={search.type ?? ''}
                           onValueChange={(value) =>
-                            handleFilterChange({
-                              type: value || '',
-                            })
+                            updateSearch({ type: value || undefined })
                           }
                         >
                           <SelectTrigger className="h-8 w-full text-xs">
@@ -337,6 +438,9 @@ function TicketsPage() {
                             <SelectItem value="">All</SelectItem>
                             <SelectItem value="REPORT_USER">
                               Report User
+                            </SelectItem>
+                            <SelectItem value="REPORT_PLAN">
+                              Report Plan
                             </SelectItem>
                           </SelectContent>
                         </Select>
@@ -349,9 +453,7 @@ function TicketsPage() {
                         <Select
                           value={search.status ?? ''}
                           onValueChange={(value) =>
-                            handleFilterChange({
-                              status: value || '',
-                            })
+                            updateSearch({ status: value || undefined })
                           }
                         >
                           <SelectTrigger className="h-8 w-full text-xs">
@@ -373,9 +475,7 @@ function TicketsPage() {
                         <Select
                           value={search.priority ?? ''}
                           onValueChange={(value) =>
-                            handleFilterChange({
-                              priority: value || '',
-                            })
+                            updateSearch({ priority: value || undefined })
                           }
                         >
                           <SelectTrigger className="h-8 w-full text-xs">
@@ -396,20 +496,28 @@ function TicketsPage() {
                           size="sm"
                           className="h-7 px-2 text-[11px]"
                           onClick={handleClearFilters}
-                          disabled={
-                            !search.type &&
-                            !search.status &&
-                            !search.priority &&
-                            !search.reporter
-                          }
+                          disabled={filtersDisabled}
                         >
-                          Clear filters
+                          Clear all
                         </Button>
                       </div>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               </div>
+
+              {filterChips.length > 0 && (
+                <FilterChips chips={filterChips} className="px-4 lg:px-6" />
+              )}
+
+              <ListMetaBar
+                total={totalTickets}
+                itemLabel="ticket"
+                isLoading={isLoading}
+                presets={presets}
+                onClearFilters={handleClearFilters}
+                showClearWhenEmpty
+              />
 
               {successMessage && (
                 <div className="px-4 pb-2 lg:px-6">

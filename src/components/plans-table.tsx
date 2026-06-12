@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { CalendarIcon, MapPinIcon, UserIcon } from 'lucide-react'
 
-import type { Plan } from '@/server/api/plans'
+import type { Plan, PlanSortField } from '@/server/api/plans'
 import { planColumns } from '@/constants/planDataColumns'
 import { DetailSheet } from '@/components/detail-sheet'
 import { TableWithPagination } from '@/components/table-with-pagination'
@@ -24,6 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
@@ -79,6 +80,10 @@ type PlansTableProps = {
   onPageChange: (pageIndex: number) => void
   onPageSizeChange: (pageSize: number) => void
   isLoading?: boolean
+  sortBy?: PlanSortField
+  sortOrder?: 'asc' | 'desc'
+  onSortChange?: (sortBy: PlanSortField, sortOrder: 'asc' | 'desc') => void
+  onClearFilters?: () => void
 }
 
 export function PlansTable({
@@ -89,6 +94,10 @@ export function PlansTable({
   isLoading,
   onPageChange,
   onPageSizeChange,
+  sortBy,
+  sortOrder,
+  onSortChange,
+  onClearFilters,
 }: PlansTableProps) {
   const [sheetOpen, setSheetOpen] = React.useState(false)
   const [selectedCreatorId, setSelectedCreatorId] = React.useState<
@@ -129,8 +138,6 @@ export function PlansTable({
   })
 
   const user = (userResponse?.data as UserDetail | undefined) ?? null
-
-  console.log('User Data: ', user)
 
   const { data: planResponse, isLoading: isPlanLoading } = useQuery({
     ...getPlanByIdOptions(selectedPlanId ?? ''),
@@ -229,8 +236,24 @@ export function PlansTable({
           onCreatorClick: handleCreatorClick,
           onViewPlan: handleViewPlan,
           onSuspendPlan: handleSuspendPlan,
+          sortBy,
+          sortOrder,
+          onSortChange,
         }}
-        emptyMessage="No plans found."
+        emptyMessage="No plans match these filters."
+        emptyAction={
+          onClearFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={onClearFilters}
+            >
+              Clear all filters
+            </Button>
+          ) : undefined
+        }
         loadingMessage="Loading plans data..."
         isLoading={isLoading}
       />
