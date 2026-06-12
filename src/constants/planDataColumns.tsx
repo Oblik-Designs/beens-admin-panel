@@ -89,6 +89,44 @@ export const planColumns: Array<ColumnDef<Plan>> = [
     meta: { className: 'max-w-[220px] truncate px-4' },
   },
   {
+    id: 'kind',
+    header: 'Kind',
+    cell: ({ row }) => {
+      const plan = row.original
+      if (plan.isRecurring) {
+        return (
+          <div className="flex items-center gap-1.5">
+            <Badge
+              variant="outline"
+              className="text-muted-foreground px-1.5"
+            >
+              Recurring
+            </Badge>
+            {typeof plan.instancesCount === 'number' &&
+              plan.instancesCount > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {plan.instancesCount} slot
+                  {plan.instancesCount === 1 ? '' : 's'}
+                </span>
+              )}
+          </div>
+        )
+      }
+      if (plan.parentPlanId) {
+        return (
+          <Badge variant="outline" className="text-muted-foreground px-1.5">
+            Slot instance
+          </Badge>
+        )
+      }
+      return (
+        <Badge variant="outline" className="text-muted-foreground px-1.5">
+          One-off
+        </Badge>
+      )
+    },
+  },
+  {
     accessorKey: 'status',
     header: 'Status',
     cell: ({ row }) => (
@@ -119,12 +157,26 @@ export const planColumns: Array<ColumnDef<Plan>> = [
     id: 'participants',
     header: 'Current Participants',
     cell: ({ row }) => {
-      const count = row.original.currentParticipants?.length ?? 0
+      const plan = row.original
+      // Recurring templates hold no participants themselves — bookings live
+      // on their slot instances. Show the rolled-up total when the API
+      // provides it.
+      const count = plan.isRecurring
+        ? (plan.instanceParticipantsTotal ??
+          plan.currentParticipants?.length ??
+          0)
+        : (plan.currentParticipants?.length ?? 0)
 
       return (
         <div className="flex items-center gap-1">
           <UsersIcon className="size-3 text-muted-foreground" />
           <span>{count}</span>
+          {plan.isRecurring &&
+            typeof plan.instanceParticipantsTotal === 'number' && (
+              <span className="text-xs text-muted-foreground">
+                across slots
+              </span>
+            )}
         </div>
       )
     },

@@ -53,6 +53,13 @@ export interface Plan {
   createdAt: string
   isFull: boolean
   canJoin: boolean
+  /** True for recurring plan templates. */
+  isRecurring?: boolean
+  /** Set on slot instances spawned from a recurring template. */
+  parentPlanId?: string | null
+  /** Rollups the API attaches to recurring templates (non-cancelled children). */
+  instancesCount?: number
+  instanceParticipantsTotal?: number
 }
 
 export interface PlanSearchPagination {
@@ -81,6 +88,10 @@ export interface PlanSearchParams {
   status?: PlanStatusFilter
   startDate?: string
   endDate?: string
+  /** Hide recurring-slot instances so each plan appears once. */
+  excludeInstances?: boolean
+  /** Return only the instances of this recurring template. */
+  parentPlanId?: string
 }
 
 export interface PlanSearchResponse {

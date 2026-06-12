@@ -65,6 +65,10 @@ export const planSearchSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   creator: z.string().optional(),
+  // Recurring plans spawn one child "instance" per booked slot; by default
+  // (unset/false) we collapse those so each plan shows once instead of one
+  // row per booked slot.
+  showInstances: z.boolean().optional(),
 })
 
 function searchToParams(
@@ -80,6 +84,7 @@ function searchToParams(
   if (search.status) params.status = search.status as PlanStatusFilter
   if (search.startDate) params.startDate = search.startDate
   if (search.endDate) params.endDate = search.endDate
+  if (!search.showInstances) params.excludeInstances = true
 
   return params
 }
@@ -169,7 +174,13 @@ function PlansPage() {
     enabled: !!userSearchParams?.query,
   })
 
-  const plans = (data?.data?.plans as Array<any>) ?? []
+  const rawPlans = (data?.data?.plans as Array<any>) ?? []
+  // Defensive client-side filter: keeps instances hidden even when the API
+  // predates the excludeInstances parameter (older deployments strip the
+  // unknown key and return all rows).
+  const plans = search.showInstances
+    ? rawPlans
+    : rawPlans.filter((p) => !p.parentPlanId)
   const pagination = data?.data?.pagination
   const totalPlans = pagination?.totalItems ?? 0
   const pageCount =
@@ -231,6 +242,7 @@ function PlansPage() {
     status?: PlanStatusFilter | ''
     startDate?: string
     endDate?: string
+    showInstances?: boolean
   }) => {
     navigate({
       search: (prev) => ({
@@ -245,6 +257,9 @@ function PlansPage() {
         }),
         ...(patch.endDate !== undefined && {
           endDate: patch.endDate || undefined,
+        }),
+        ...(patch.showInstances !== undefined && {
+          showInstances: patch.showInstances,
         }),
       }),
       replace: true,
@@ -413,6 +428,32 @@ function PlansPage() {
                             <SelectItem value="Completed">Completed</SelectItem>
                             <SelectItem value="Cancelled">Cancelled</SelectItem>
                             <SelectItem value="Suspended">Suspended</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium text-muted-foreground">
+                          Recurring slot instances
+                        </Label>
+                        <Select
+                          value={search.showInstances ? 'show' : 'hide'}
+                          onValueChange={(value) =>
+                            handleFilterChange({
+                              showInstances: value === 'show',
+                            })
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-full text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="hide">
+                              Hide (one row per plan)
+                            </SelectItem>
+                            <SelectItem value="show">
+                              Show every slot instance
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
