@@ -39,7 +39,7 @@ import {
 } from '@/lib/page-size-preference'
 import { searchUserOptions } from '@/queries/users'
 
-export const userSearchSchema = z.object({
+const userSearchSchema = z.object({
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(10),
   query: z.string().optional(),

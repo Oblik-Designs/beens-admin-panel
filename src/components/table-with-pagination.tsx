@@ -26,13 +26,6 @@ import {
 } from '@/components/ui/table'
 import { Label } from '@/components/ui/label'
 
-export type TableWithPaginationMeta = {
-  onViewUser?: (user: unknown) => void
-  onViewTicketActions?: (ticket: unknown) => void
-  onCreatorClick?: (userId: string) => void
-  [key: string]: unknown
-}
-
 export type TableWithPaginationProps<TData> = {
   data: Array<TData>
   columns: Array<ColumnDef<TData>>
