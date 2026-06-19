@@ -77,7 +77,7 @@ export interface UserAddressUpdate {
 
 export interface UserKycUpdate {
   status?: 'NOT_STARTED' | 'PENDING' | 'APPROVED' | 'REJECTED'
-  verificationStatus?: 'UNVERIFIED' | 'VERIFIED'
+  verificationStatus?: 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED'
   moderationComment?: string
   reviewerId?: string
   reviewDate?: string
@@ -134,6 +134,7 @@ export interface UserUpdatePayload {
   subscriptionStart?: string
   subscriptionEnd?: string
   wallet?: number
+  permanentElite?: boolean
   kyc?: UserKycUpdate
   preferences?: UserPreferencesUpdate
 }

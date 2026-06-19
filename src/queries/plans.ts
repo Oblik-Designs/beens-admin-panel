@@ -1,6 +1,14 @@
 import { queryOptions } from '@tanstack/react-query'
-import type { PlanSearchParams } from '@/server/api/plans'
-import { getPlanById, getPlanCategories, searchPlans } from '@/server/api/plans'
+import type {
+  PlanSearchParams,
+  SuspendAndRefundPlanResponse,
+} from '@/server/api/plans'
+import {
+  getPlanById,
+  getPlanCategories,
+  searchPlans,
+  suspendAndRefundPlan,
+} from '@/server/api/plans'
 
 export const searchPlansOptions = (params?: PlanSearchParams) =>
   queryOptions({
@@ -28,3 +36,11 @@ export const getPlanCategoriesOptions = () =>
     },
     staleTime: Infinity,
   })
+
+export const suspendAndRefundPlanOptions = (planId: string) => ({
+  mutationKey: ['plans', 'suspend-and-refund', planId],
+  mutationFn: async (reason: string): Promise<SuspendAndRefundPlanResponse> => {
+    // @ts-expect-error - createServerFn types don't properly reflect POST data parameter
+    return await suspendAndRefundPlan({ data: { planId, reason } })
+  },
+})

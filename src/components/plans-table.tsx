@@ -1,15 +1,32 @@
 import * as React from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { CalendarIcon, MapPinIcon, UserIcon } from 'lucide-react'
 
-import type { Plan } from '@/server/api/plans'
+import type { Plan, PlanSortField } from '@/server/api/plans'
 import { planColumns } from '@/constants/planDataColumns'
 import { DetailSheet } from '@/components/detail-sheet'
 import { TableWithPagination } from '@/components/table-with-pagination'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getUserByIdOptions } from '@/queries/users'
-import { getPlanByIdOptions } from '@/queries/plans'
+import {
+  getPlanByIdOptions,
+  searchPlansOptions,
+  suspendAndRefundPlanOptions,
+} from '@/queries/plans'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 
 type UserDetail = {
   _id?: string
@@ -63,6 +80,10 @@ type PlansTableProps = {
   onPageChange: (pageIndex: number) => void
   onPageSizeChange: (pageSize: number) => void
   isLoading?: boolean
+  sortBy?: PlanSortField
+  sortOrder?: 'asc' | 'desc'
+  onSortChange?: (sortBy: PlanSortField, sortOrder: 'asc' | 'desc') => void
+  onClearFilters?: () => void
 }
 
 export function PlansTable({
@@ -73,6 +94,10 @@ export function PlansTable({
   isLoading,
   onPageChange,
   onPageSizeChange,
+  sortBy,
+  sortOrder,
+  onSortChange,
+  onClearFilters,
 }: PlansTableProps) {
   const [sheetOpen, setSheetOpen] = React.useState(false)
   const [selectedCreatorId, setSelectedCreatorId] = React.useState<
@@ -84,6 +109,29 @@ export function PlansTable({
     null,
   )
 
+  const [pendingSuspend, setPendingSuspend] = React.useState<Plan | null>(null)
+  const [suspendReason, setSuspendReason] = React.useState('')
+  const [suspendError, setSuspendError] = React.useState<string | null>(null)
+
+  const queryClient = useQueryClient()
+
+  const suspendMutation = useMutation({
+    ...suspendAndRefundPlanOptions(pendingSuspend?._id ?? ''),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plans'] })
+      setPendingSuspend(null)
+      setSuspendReason('')
+      setSuspendError(null)
+    },
+    onError: (error: unknown) => {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to suspend and refund the plan.'
+      setSuspendError(message)
+    },
+  })
+
   const { data: userResponse, isLoading: isUserLoading } = useQuery({
     ...getUserByIdOptions(selectedCreatorId),
     enabled: sheetOpen && !!selectedCreatorId,
@@ -91,14 +139,32 @@ export function PlansTable({
 
   const user = (userResponse?.data as UserDetail | undefined) ?? null
 
-  console.log('User Data: ', user)
-
   const { data: planResponse, isLoading: isPlanLoading } = useQuery({
     ...getPlanByIdOptions(selectedPlanId ?? ''),
     enabled: !!selectedPlanId,
   })
 
   const plan = planResponse?.data ?? null
+
+  // For recurring templates, list their slot instances. The creator filter
+  // bounds the result so the client-side parentPlanId filter stays correct
+  // even on API versions that don't support the parentPlanId parameter yet.
+  const { data: instancesResponse, isLoading: isInstancesLoading } = useQuery({
+    ...searchPlansOptions({
+      parentPlanId: selectedPlanId ?? undefined,
+      creator: plan?.creator?._id,
+      limit: 100,
+    }),
+    enabled: !!selectedPlanId && !!plan?.isRecurring && !!plan?.creator?._id,
+  })
+
+  const instances = React.useMemo(
+    () =>
+      ((instancesResponse?.data?.plans as Array<any>) ?? []).filter(
+        (p) => p.parentPlanId === selectedPlanId,
+      ),
+    [instancesResponse, selectedPlanId],
+  )
 
   const handleCreatorClick = React.useCallback((userId: string) => {
     setSelectedCreatorId(userId)
@@ -124,6 +190,32 @@ export function PlansTable({
     }
   }, [])
 
+  const handleSuspendPlan = React.useCallback((plan: Plan) => {
+    setSuspendError(null)
+    setSuspendReason('')
+    setPendingSuspend(plan)
+  }, [])
+
+  const handleCancelSuspend = React.useCallback(() => {
+    if (suspendMutation.isPending) return
+    setPendingSuspend(null)
+    setSuspendReason('')
+    setSuspendError(null)
+  }, [suspendMutation.isPending])
+
+  const handleConfirmSuspend = React.useCallback(() => {
+    if (!pendingSuspend) return
+    const trimmed = suspendReason.trim()
+    if (!trimmed) {
+      setSuspendError('Please provide a reason for the suspension.')
+      return
+    }
+    setSuspendError(null)
+    suspendMutation.mutate(trimmed)
+  }, [pendingSuspend, suspendReason, suspendMutation])
+
+  const pendingSuspendTitle = pendingSuspend?.title || pendingSuspend?._id || ''
+
   const fullName =
     user?.displayName ||
     [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() ||
@@ -143,8 +235,25 @@ export function PlansTable({
         meta={{
           onCreatorClick: handleCreatorClick,
           onViewPlan: handleViewPlan,
+          onSuspendPlan: handleSuspendPlan,
+          sortBy,
+          sortOrder,
+          onSortChange,
         }}
-        emptyMessage="No plans found."
+        emptyMessage="No plans match these filters."
+        emptyAction={
+          onClearFilters ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={onClearFilters}
+            >
+              Clear all filters
+            </Button>
+          ) : undefined
+        }
         loadingMessage="Loading plans data..."
         isLoading={isLoading}
       />
@@ -152,17 +261,17 @@ export function PlansTable({
       <DetailSheet
         open={sheetOpen}
         onOpenChange={handleSheetOpenChange}
-        title="Creator details"
-        description="View the creator's profile information."
+        title="User details"
+        description="View the user's profile information."
       >
         {isUserLoading && (
           <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-            Loading creator details...
+            Loading user details...
           </div>
         )}
         {!isUserLoading && !user && (
           <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-            No creator details found.
+            No user details found.
           </div>
         )}
         {!isUserLoading && user && (
@@ -391,9 +500,168 @@ export function PlansTable({
                 </div>
               </div>
             </div>
+
+            <div className="space-y-2 rounded-lg border bg-muted/40 px-4 py-3">
+              <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
+                <span>Participants</span>
+                <span>
+                  {plan.currentParticipants?.length ?? 0}
+                  {plan.maxParticipants ? ` / ${plan.maxParticipants}` : ''}
+                </span>
+              </div>
+              {(!Array.isArray(plan.currentParticipants) ||
+                plan.currentParticipants.length === 0) && (
+                <p className="text-sm text-muted-foreground">
+                  No participants yet.
+                </p>
+              )}
+              <div className="space-y-1">
+                {(plan.currentParticipants ?? []).map((participant: any) => {
+                  // currentParticipants is populated with user docs by the
+                  // API; tolerate raw id strings just in case.
+                  const id =
+                    typeof participant === 'string'
+                      ? participant
+                      : participant?._id
+                  const name =
+                    typeof participant === 'string'
+                      ? participant
+                      : participant?.displayName ||
+                        `${participant?.firstName ?? ''} ${
+                          participant?.lastName ?? ''
+                        }`.trim() ||
+                        'Unknown user'
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => handleCreatorClick(id)}
+                      className="flex w-full items-center gap-2 rounded-md px-1 py-1 text-left text-sm hover:bg-muted/70 transition-colors cursor-pointer"
+                    >
+                      <Avatar className="size-7">
+                        <AvatarImage
+                          src={
+                            typeof participant === 'string'
+                              ? undefined
+                              : participant?.profileImage
+                          }
+                          alt={name}
+                        />
+                        <AvatarFallback className="text-muted-foreground bg-transparent border">
+                          <UserIcon className="size-3.25" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="truncate font-medium underline-offset-2 hover:underline">
+                        {name}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {plan.isRecurring && (
+              <div className="space-y-2 rounded-lg border bg-muted/40 px-4 py-3">
+                <div className="flex items-center justify-between text-xs uppercase tracking-wide text-muted-foreground">
+                  <span>Slot instances</span>
+                  <span>{instances.length}</span>
+                </div>
+                {isInstancesLoading && (
+                  <p className="text-sm text-muted-foreground">
+                    Loading instances...
+                  </p>
+                )}
+                {!isInstancesLoading && instances.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No booked slots yet.
+                  </p>
+                )}
+                <div className="space-y-1">
+                  {instances.map((instance) => (
+                    <button
+                      key={instance._id}
+                      type="button"
+                      onClick={() => handleViewPlan(instance._id)}
+                      className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1.5 text-left text-sm hover:bg-muted/70 transition-colors cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <CalendarIcon className="size-3 text-muted-foreground" />
+                        <span className="font-medium">
+                          {formatDate(instance.startDate)}
+                          {instance.startTime
+                            ? ` at ${instance.startTime}`
+                            : ''}
+                        </span>
+                      </span>
+                      <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>
+                          {instance.currentParticipants?.length ?? 0}{' '}
+                          participant
+                          {(instance.currentParticipants?.length ?? 0) === 1
+                            ? ''
+                            : 's'}
+                        </span>
+                        <span>{instance.status}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </DetailSheet>
+
+      <AlertDialog
+        open={!!pendingSuspend}
+        onOpenChange={(open) => {
+          if (!open) handleCancelSuspend()
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Suspend &amp; refund this plan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingSuspendTitle
+                ? `"${pendingSuspendTitle}" will be suspended and all participant payments will be refunded to their wallets. This cannot be undone automatically.`
+                : 'This plan will be suspended and all participant payments will be refunded.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="suspend-reason" className="text-xs">
+              Reason (shared with the creator)
+            </Label>
+            <Textarea
+              id="suspend-reason"
+              value={suspendReason}
+              onChange={(event) => setSuspendReason(event.target.value)}
+              placeholder="Explain why this plan is being suspended..."
+              maxLength={1000}
+              disabled={suspendMutation.isPending}
+              className="min-h-24 text-sm"
+            />
+          </div>
+          {suspendError && (
+            <p className="text-destructive text-sm">{suspendError}</p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={suspendMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleConfirmSuspend}
+              disabled={
+                suspendMutation.isPending || !suspendReason.trim()
+              }
+            >
+              {suspendMutation.isPending
+                ? 'Suspending...'
+                : 'Suspend & Refund'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

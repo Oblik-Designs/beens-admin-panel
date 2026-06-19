@@ -33,7 +33,7 @@ export interface PlanCategory {
   _id: string
   id: number
   name: string
-  subDescription: string[]
+  subDescription: Array<string>
   description: string
   status: 'ACTIVE' | 'DISABLED'
   createdAt: string
@@ -66,6 +66,19 @@ export interface Plan {
   createdAt: string
   isFull: boolean
   canJoin: boolean
+  /** True for recurring plan templates. */
+  isRecurring?: boolean
+  /** Set on slot instances spawned from a recurring template. */
+  parentPlanId?: string | null
+  /** Rollups the API attaches to recurring templates (non-cancelled children). */
+  instancesCount?: number
+  instanceParticipantsTotal?: number
+  /** Open REPORT_PLAN tickets targeting this plan. */
+  reportCount?: number
+  /** Populated for slot instances. */
+  parentPlan?: { _id: string; title: string }
+  /** Heuristic flag: slot instant may be stored as local time in UTC. */
+  timezoneMismatch?: boolean
 }
 
 export interface PlanSearchPagination {
@@ -85,16 +98,49 @@ export type PlanStatusFilter =
   | 'Cancelled'
   | 'Suspended'
 
+export type PlanSortField =
+  | 'createdAt'
+  | 'updatedAt'
+  | 'startDate'
+  | 'endDate'
+  | 'title'
+  | 'status'
+  | 'views'
+
+export type PlanKindFilter = 'one-off' | 'recurring' | 'instances'
+
+export type PlanReportFilter = 'has' | 'no'
+
 export interface PlanSearchParams {
   page?: number
   limit?: number
   query?: string
-  type?: PlanTypeFilter
+  type?: Array<PlanTypeFilter>
   creator?: string
-  status?: PlanStatusFilter
+  status?: Array<PlanStatusFilter>
+  planKinds?: Array<PlanKindFilter>
+  reports?: Array<PlanReportFilter>
+  /** Filter plans whose startDate is on or after this day (YYYY-MM-DD). */
   startDate?: string
+  /** Filter plans whose startDate is on or before this day (YYYY-MM-DD). */
   endDate?: string
   categoryId?: number
+  /** Filter plans created on or after this day (YYYY-MM-DD). */
+  createdFrom?: string
+  /** Filter plans created on or before this day (YYYY-MM-DD). */
+  createdTo?: string
+  /** Hide recurring-slot instances so each plan appears once. */
+  excludeInstances?: boolean
+  /** Return only slot instances (parentPlanId set). */
+  instancesOnly?: boolean
+  /** Return only the instances of this recurring template. */
+  parentPlanId?: string
+  /** When true, only plans with REPORT_PLAN tickets; when false, exclude them. */
+  hasReports?: boolean
+  /** Plans sharing the same parent + startDate (duplicate slot instances). */
+  duplicateSlots?: boolean
+  sortBy?: PlanSortField
+  sortOrder?: 'asc' | 'desc'
 }
 
 export interface PlanCategoriesResponse {
@@ -145,5 +191,37 @@ export const getPlanCategories = createServerFn({
   method: 'GET',
 }).handler(async () => {
   const result = await apiClient.get<PlanCategoriesResponse>('/plan-categories')
+  return result
+})
+
+export interface SuspendAndRefundPlanParams {
+  planId: string
+  reason: string
+}
+
+export interface SuspendAndRefundPlanResponse {
+  success: boolean
+  data: {
+    planId: string
+    status: string
+    reason: string
+    refundedTransactionIds: Array<string>
+  }
+}
+
+export const suspendAndRefundPlan = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const params = ctx.data as SuspendAndRefundPlanParams | undefined
+  if (!params?.planId) {
+    throw new Error('Plan ID is required')
+  }
+  if (!params.reason || params.reason.trim().length === 0) {
+    throw new Error('Reason is required')
+  }
+  const result = await apiClient.post<SuspendAndRefundPlanResponse>(
+    `/admin/plans/${params.planId}/suspend-and-refund`,
+    { reason: params.reason },
+  )
   return result
 })

@@ -10,9 +10,13 @@ import {
 } from 'lucide-react'
 
 import type { UserSearchParams } from '@/server/api/users'
+import type { FilterChip } from '@/components/admin/filter-chips'
+import { FilterChips } from '@/components/admin/filter-chips'
+import { ListMetaBar } from '@/components/admin/list-meta-bar'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -29,6 +33,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { UserTable } from '@/components/user-table'
+import {
+  getStoredPageSize,
+  setStoredPageSize,
+} from '@/lib/page-size-preference'
 import { searchUserOptions } from '@/queries/users'
 
 export const userSearchSchema = z.object({
@@ -43,9 +51,9 @@ export const userSearchSchema = z.object({
   kycStatus: z.string().optional(),
 })
 
-function searchToParams(
-  search: z.infer<typeof userSearchSchema>,
-): UserSearchParams {
+type UserSearch = z.infer<typeof userSearchSchema>
+
+function searchToParams(search: UserSearch): UserSearchParams {
   const filter: UserSearchParams['filter'] = {}
   if (search.status) filter.status = search.status
   if (search.role) filter.role = search.role
@@ -59,6 +67,64 @@ function searchToParams(
     sortOrder: search.sortOrder,
     ...(Object.keys(filter).length ? { filter } : {}),
   }
+}
+
+function countActiveFilters(search: UserSearch): number {
+  let count = 0
+  if (search.status) count++
+  if (search.gender) count++
+  if (search.kycStatus) count++
+  if (search.sortOrder !== 'asc') count++
+  return count
+}
+
+function buildFilterChips(
+  search: UserSearch,
+  updateSearch: (patch: Partial<UserSearch>) => void,
+): Array<FilterChip> {
+  const chips: Array<FilterChip> = []
+
+  if (search.query) {
+    chips.push({
+      id: 'query',
+      label: `Search: ${search.query}`,
+      onRemove: () => updateSearch({ query: undefined }),
+    })
+  }
+
+  if (search.status) {
+    chips.push({
+      id: 'status',
+      label: `Status: ${search.status}`,
+      onRemove: () => updateSearch({ status: undefined }),
+    })
+  }
+
+  if (search.gender) {
+    chips.push({
+      id: 'gender',
+      label: `Gender: ${search.gender}`,
+      onRemove: () => updateSearch({ gender: undefined }),
+    })
+  }
+
+  if (search.kycStatus) {
+    chips.push({
+      id: 'kyc',
+      label: `KYC: ${search.kycStatus}`,
+      onRemove: () => updateSearch({ kycStatus: undefined }),
+    })
+  }
+
+  if (search.sortOrder !== 'asc') {
+    chips.push({
+      id: 'sort',
+      label: `Sort: ${search.sortOrder === 'desc' ? 'Newest first' : 'Oldest first'}`,
+      onRemove: () => updateSearch({ sortOrder: 'asc' }),
+    })
+  }
+
+  return chips
 }
 
 export const Route = createFileRoute('/(app)/users')({
@@ -83,6 +149,16 @@ function UsersPage() {
   React.useEffect(() => {
     setSearchInput(search.query ?? '')
   }, [search.query])
+
+  React.useEffect(() => {
+    const stored = getStoredPageSize()
+    if (stored !== search.limit) {
+      navigate({
+        search: (prev) => ({ ...prev, limit: stored }),
+        replace: true,
+      })
+    }
+  }, [])
 
   const applySearchInput = React.useCallback(
     (value: string) => {
@@ -112,6 +188,7 @@ function UsersPage() {
   const pageCount =
     apiTotalPages ?? (search.limit > 0 ? Math.ceil(total / search.limit) : 1)
   const pageIndex = search.page - 1
+  const activeFilterCount = countActiveFilters(search)
 
   const handlePageChange = (newPageIndex: number) => {
     navigate({
@@ -121,52 +198,52 @@ function UsersPage() {
   }
 
   const handlePageSizeChange = (newPageSize: number) => {
+    setStoredPageSize(newPageSize)
     navigate({
       search: (prev) => ({ ...prev, limit: newPageSize, page: 1 }),
       replace: true,
     })
   }
 
-  const handleFilterChange = (patch: {
-    status?: string
-    role?: string
-    gender?: string
-    kycStatus?: string
-    sortOrder?: 'asc' | 'desc'
-  }) => {
+  const updateSearch = React.useCallback(
+    (patch: Partial<UserSearch>) => {
+      navigate({
+        search: (prev) => ({ ...prev, ...patch, page: 1 }),
+        replace: true,
+      })
+    },
+    [navigate],
+  )
+
+  const handleClearFilters = () => {
+    setSearchInput('')
     navigate({
-      search: (prev) => ({
-        ...prev,
+      search: {
         page: 1,
-        ...(patch.status !== undefined && {
-          status: patch.status || undefined,
-        }),
-        ...(patch.gender !== undefined && {
-          gender: patch.gender || undefined,
-        }),
-        ...(patch.kycStatus !== undefined && {
-          kycStatus: patch.kycStatus || undefined,
-        }),
-        ...(patch.sortOrder !== undefined && { sortOrder: patch.sortOrder }),
-      }),
+        limit: search.limit,
+        role: 'USER',
+        sortBy: 'createdAt',
+        sortOrder: 'asc',
+      },
       replace: true,
     })
   }
 
-  const handleClearFilters = () => {
-    navigate({
-      search: (prev) => ({
-        ...prev,
-        page: 1,
-        status: undefined,
-        role: 'USER',
-        gender: undefined,
-        kycStatus: undefined,
-        sortOrder: 'asc',
-      }),
-      replace: true,
-    })
-  }
+  const filterChips = buildFilterChips(search, updateSearch)
+
+  const filtersDisabled =
+    activeFilterCount === 0 && !search.query
+
+  const presets = [
+    {
+      label: 'Unverified',
+      onClick: () => updateSearch({ status: 'UNVERIFIED' }),
+    },
+    {
+      label: 'KYC pending',
+      onClick: () => updateSearch({ kycStatus: 'PENDING' }),
+    },
+  ]
 
   return (
     <SidebarProvider
@@ -184,7 +261,6 @@ function UsersPage() {
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <div className="flex flex-col gap-3 px-4 lg:flex-row lg:items-center lg:justify-between lg:px-6">
-                {/* Search Bar */}
                 <div className="flex w-full max-w-sm items-center gap-2">
                   <SearchIcon className="text-muted-foreground size-4" />
                   <Input
@@ -195,14 +271,21 @@ function UsersPage() {
                   />
                 </div>
 
-                {/* Filters */}
                 <div className="flex items-center gap-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       render={<Button variant="outline" size="sm" />}
                     >
                       <SlidersHorizontalIcon className="mr-2 size-4" />
-                      Filters
+                      Filters &amp; sort
+                      {activeFilterCount > 0 && (
+                        <Badge
+                          variant="secondary"
+                          className="ml-2 h-5 min-w-5 px-1.5 text-[10px]"
+                        >
+                          {activeFilterCount}
+                        </Badge>
+                      )}
                       <ChevronDownIcon className="ml-1 size-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -216,7 +299,7 @@ function UsersPage() {
                         <Select
                           value={search.status ?? ''}
                           onValueChange={(value) =>
-                            handleFilterChange({ status: value ?? '' })
+                            updateSearch({ status: value || undefined })
                           }
                         >
                           <SelectTrigger className="h-8 w-full text-xs">
@@ -254,7 +337,7 @@ function UsersPage() {
                         <Select
                           value={search.gender ?? ''}
                           onValueChange={(value) =>
-                            handleFilterChange({ gender: value ?? '' })
+                            updateSearch({ gender: value || undefined })
                           }
                         >
                           <SelectTrigger className="h-8 w-full text-xs">
@@ -275,7 +358,7 @@ function UsersPage() {
                         <Select
                           value={search.kycStatus ?? ''}
                           onValueChange={(value) =>
-                            handleFilterChange({ kycStatus: value ?? '' })
+                            updateSearch({ kycStatus: value || undefined })
                           }
                         >
                           <SelectTrigger className="h-8 w-full text-xs">
@@ -299,7 +382,7 @@ function UsersPage() {
                         <Select
                           value={search.sortOrder}
                           onValueChange={(value) =>
-                            handleFilterChange({
+                            updateSearch({
                               sortOrder: (value as 'asc' | 'desc') ?? 'desc',
                             })
                           }
@@ -319,20 +402,29 @@ function UsersPage() {
                           size="sm"
                           className="h-7 px-2 text-[11px]"
                           onClick={handleClearFilters}
-                          disabled={
-                            !search.status &&
-                            !search.gender &&
-                            !search.kycStatus &&
-                            search.sortOrder === 'asc'
-                          }
+                          disabled={filtersDisabled}
                         >
-                          Clear filters
+                          Clear all
                         </Button>
                       </div>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               </div>
+
+              {filterChips.length > 0 && (
+                <FilterChips chips={filterChips} className="px-4 lg:px-6" />
+              )}
+
+              <ListMetaBar
+                total={total}
+                itemLabel="user"
+                isLoading={isLoading}
+                presets={presets}
+                onClearFilters={handleClearFilters}
+                showClearWhenEmpty
+              />
+
               {!isLoading && (
                 <UserTable
                   data={users}
