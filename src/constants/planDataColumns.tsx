@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
-export type PlanTableMeta = {
+type PlanTableMeta = {
   onCreatorClick?: (userId: string) => void
   onViewPlan?: (planId: string) => void
   onSuspendPlan?: (plan: Plan) => void
@@ -60,7 +60,11 @@ function sortableHeader(label: string, sortField: PlanSortField) {
         sortField={sortField}
         activeSortBy={meta?.sortBy}
         activeSortOrder={meta?.sortOrder}
-        onSortChange={meta?.onSortChange}
+        onSortChange={
+          meta?.onSortChange as
+            | ((sortBy: string, sortOrder: 'asc' | 'desc') => void)
+            | undefined
+        }
       />
     )
   }
@@ -132,10 +136,12 @@ export const planColumns: Array<ColumnDef<Plan>> = [
           {reportCount > 0 && (
             <Link
               to="/tickets"
-              search={{
-                type: 'REPORT_PLAN',
-                status: 'OPEN',
-              }}
+              search={
+                {
+                  type: 'REPORT_PLAN',
+                  status: 'OPEN',
+                } as never
+              }
               className="w-fit"
               onClick={(event) => event.stopPropagation()}
             >

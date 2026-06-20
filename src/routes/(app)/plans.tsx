@@ -104,7 +104,7 @@ const REPORT_OPTIONS: Array<{ value: PlanReportFilter; label: string }> = [
   { value: 'no', label: 'No reports' },
 ]
 
-export const planSearchSchema = z
+const planSearchSchema = z
   .object({
     page: z.coerce.number().min(1).default(1),
     limit: z.coerce.number().min(1).max(100).default(10),
@@ -378,7 +378,10 @@ function normalizePlanSearchInput(raw: unknown): unknown {
   return input
 }
 
-/** URL-safe search params — never writes empty arrays like `type=[]`. */
+/** URL-safe search params — never writes empty arrays like `type=[]`.
+ *  Return is the URL-encoded form (arrays joined to strings); TanStack's
+ *  `validateSearch` re-parses it back into a real `PlanSearch` at navigation
+ *  time, so the cast at the return is the documented round-trip. */
 function planSearchToUrl(
   search: Partial<PlanSearch> & {
     page?: number
@@ -386,7 +389,7 @@ function planSearchToUrl(
     sortBy?: PlanSearch['sortBy']
     sortOrder?: PlanSearch['sortOrder']
   },
-) {
+): PlanSearch {
   const url: Record<string, string | number | boolean> = {
     page: search.page ?? 1,
     limit: search.limit ?? 10,
@@ -413,7 +416,7 @@ function planSearchToUrl(
   if (planKinds) url.planKinds = planKinds
   if (reports) url.reports = reports
 
-  return url
+  return url as unknown as PlanSearch
 }
 
 export const Route = createFileRoute('/(app)/plans')({
@@ -768,7 +771,6 @@ function PlansPage() {
                     <DropdownMenuContent
                       align="end"
                       className="max-h-[min(80vh,720px)] w-80 space-y-3 overflow-y-auto p-3 text-xs"
-                      onCloseAutoFocus={(event) => event.preventDefault()}
                     >
                       <div className="space-y-1">
                         <Label className="text-[11px] font-medium text-muted-foreground">

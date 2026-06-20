@@ -3,7 +3,7 @@ import { useSession } from '@tanstack/react-start/server'
 // Stores tokens plus a snapshot of /user/profile.
 // Profile payload keeps growing on the backend, so we type loosely:
 // _id is the only field consumed server-side; everything else is forwarded.
-export type SessionUser = {
+type SessionUser = {
   _id: string
   firstName?: string
   lastName?: string

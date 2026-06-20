@@ -8,6 +8,7 @@ import { planColumns } from '@/constants/planDataColumns'
 import { DetailSheet } from '@/components/detail-sheet'
 import { TableWithPagination } from '@/components/table-with-pagination'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { getUserByIdOptions } from '@/queries/users'
 import {
   getPlanByIdOptions,
@@ -215,6 +216,26 @@ export function PlansTable({
   }, [pendingSuspend, suspendReason, suspendMutation])
 
   const pendingSuspendTitle = pendingSuspend?.title || pendingSuspend?._id || ''
+  const pendingSuspendIsSlot = !!pendingSuspend?.parentPlanId
+  const pendingSuspendIsRecurringTemplate = !!pendingSuspend?.isRecurring
+  const pendingSuspendDialogTitle = pendingSuspendIsSlot
+    ? 'Suspend this slot & refund?'
+    : pendingSuspendIsRecurringTemplate
+      ? 'Suspend whole plan & all slots?'
+      : 'Suspend & refund this plan?'
+  const pendingSuspendDescription = pendingSuspendIsSlot
+    ? `Only this slot${
+        pendingSuspend?.startDate
+          ? ` (${formatDate(pendingSuspend.startDate)}${
+              pendingSuspend.startTime ? ` ${pendingSuspend.startTime}` : ''
+            })`
+          : ''
+      } will be suspended and its participants will be refunded. Other slots in this recurring plan remain active.`
+    : pendingSuspendIsRecurringTemplate
+      ? `"${pendingSuspendTitle}" and every booked slot will be suspended. Each paid slot's participants are refunded; the template itself can be re-published later. This cannot be undone automatically.`
+      : pendingSuspendTitle
+        ? `"${pendingSuspendTitle}" will be suspended and all participant payments will be refunded to their wallets. This cannot be undone automatically.`
+        : 'This plan will be suspended and all participant payments will be refunded.'
 
   const fullName =
     user?.displayName ||
@@ -577,34 +598,54 @@ export function PlansTable({
                   </p>
                 )}
                 <div className="space-y-1">
-                  {instances.map((instance) => (
-                    <button
-                      key={instance._id}
-                      type="button"
-                      onClick={() => handleViewPlan(instance._id)}
-                      className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1.5 text-left text-sm hover:bg-muted/70 transition-colors cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <CalendarIcon className="size-3 text-muted-foreground" />
-                        <span className="font-medium">
-                          {formatDate(instance.startDate)}
-                          {instance.startTime
-                            ? ` at ${instance.startTime}`
-                            : ''}
-                        </span>
-                      </span>
-                      <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>
-                          {instance.currentParticipants?.length ?? 0}{' '}
-                          participant
-                          {(instance.currentParticipants?.length ?? 0) === 1
-                            ? ''
-                            : 's'}
-                        </span>
-                        <span>{instance.status}</span>
-                      </span>
-                    </button>
-                  ))}
+                  {instances.map((instance) => {
+                    const participantCount =
+                      instance.currentParticipants?.length ?? 0
+                    const isInstanceSuspended =
+                      instance.status === 'Suspended'
+                    return (
+                      <div
+                        key={instance._id}
+                        className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1.5 text-left text-sm hover:bg-muted/70 transition-colors"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleViewPlan(instance._id)}
+                          className="flex flex-1 items-center gap-2 text-left cursor-pointer min-w-0"
+                        >
+                          <CalendarIcon className="size-3 shrink-0 text-muted-foreground" />
+                          <span className="truncate font-medium">
+                            {formatDate(instance.startDate)}
+                            {instance.startTime
+                              ? ` at ${instance.startTime}`
+                              : ''}
+                          </span>
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {participantCount} participant
+                            {participantCount === 1 ? '' : 's'}
+                          </span>
+                        </button>
+                        {isInstanceSuspended ? (
+                          <Badge
+                            variant="outline"
+                            className="h-6 px-2 text-[10px] font-medium text-destructive border-destructive/30 bg-destructive/5"
+                          >
+                            Suspended
+                          </Badge>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-[10px] text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 cursor-pointer"
+                            onClick={() => handleSuspendPlan(instance)}
+                          >
+                            Suspend slot
+                          </Button>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -620,11 +661,9 @@ export function PlansTable({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Suspend &amp; refund this plan?</AlertDialogTitle>
+            <AlertDialogTitle>{pendingSuspendDialogTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingSuspendTitle
-                ? `"${pendingSuspendTitle}" will be suspended and all participant payments will be refunded to their wallets. This cannot be undone automatically.`
-                : 'This plan will be suspended and all participant payments will be refunded.'}
+              {pendingSuspendDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
@@ -657,7 +696,11 @@ export function PlansTable({
             >
               {suspendMutation.isPending
                 ? 'Suspending...'
-                : 'Suspend & Refund'}
+                : pendingSuspendIsSlot
+                  ? 'Suspend slot'
+                  : pendingSuspendIsRecurringTemplate
+                    ? 'Suspend whole plan'
+                    : 'Suspend & Refund'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
