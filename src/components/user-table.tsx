@@ -17,14 +17,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 
-export type UserTableFilters = {
-  status: string
-  role: string
-  gender: string
-  kycStatus: string
-  sortOrder: 'asc' | 'desc'
-}
-
 type UserTableProps = {
   data: Array<User>
   pageIndex: number

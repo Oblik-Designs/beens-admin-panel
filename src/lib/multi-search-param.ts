@@ -34,9 +34,3 @@ export function serializeMultiSearchParam<T extends string>(
 ): string | undefined {
   return values.length > 0 ? values.join(',') : undefined
 }
-
-export function multiSearchParamSchema<T extends [string, ...Array<string>]>(
-  allowed: T,
-) {
-  return (value: unknown) => parseMultiSearchParam(value, allowed)
-}
