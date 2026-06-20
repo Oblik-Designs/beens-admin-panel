@@ -125,11 +125,13 @@ export const userColumns: Array<ColumnDef<User>> = [
       return (
         <Link
           to="/plans"
-          search={{
-            page: 1,
-            limit: 10,
-            creator: creatorId,
-          }}
+          search={
+            {
+              page: 1,
+              limit: 10,
+              creator: creatorId,
+            } as never
+          }
           className="flex items-center gap-1 underline"
         >
           <span>{totalPlans} Plans</span>
