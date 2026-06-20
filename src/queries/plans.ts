@@ -5,6 +5,7 @@ import type {
 } from '@/server/api/plans'
 import {
   getPlanById,
+  getPlanCategories,
   searchPlans,
   suspendAndRefundPlan,
 } from '@/server/api/plans'
@@ -25,6 +26,15 @@ export const getPlanByIdOptions = (planId: string) =>
       // @ts-expect-error - createServerFn types don't properly reflect GET data parameter
       return await getPlanById({ data: { planId } })
     },
+  })
+
+export const getPlanCategoriesOptions = () =>
+  queryOptions({
+    queryKey: ['plan-categories'],
+    queryFn: async () => {
+      return await getPlanCategories()
+    },
+    staleTime: Infinity,
   })
 
 export const suspendAndRefundPlanOptions = (planId: string) => ({

@@ -12,6 +12,7 @@ import {
 
 import type { UserSearchParams } from '@/server/api/users'
 import type {
+  PlanCategory,
   PlanKindFilter,
   PlanReportFilter,
   PlanSearchParams,
@@ -60,7 +61,7 @@ import {
   parseMultiSearchParam,
   serializeMultiSearchParam,
 } from '@/lib/multi-search-param'
-import { searchPlansOptions } from '@/queries/plans'
+import { getPlanCategoriesOptions, searchPlansOptions } from '@/queries/plans'
 import { getUserByIdOptions, searchUserOptions } from '@/queries/users'
 
 const PLAN_TYPE_VALUES = [
@@ -115,6 +116,7 @@ const planSearchSchema = z
     createdFrom: z.string().optional(),
     createdTo: z.string().optional(),
     creator: z.string().optional(),
+    categoryId: z.coerce.number().optional(),
     planKinds: z.union([z.string(), z.array(z.string())]).optional(),
     /** @deprecated use planKinds */
     planKind: z.enum(['all', 'one-off', 'recurring', 'instances']).optional(),
@@ -188,6 +190,7 @@ function searchToParams(search: PlanSearch): PlanSearchParams {
   if (search.status.length) params.status = search.status as Array<PlanStatusFilter>
   if (search.startDate) params.startDate = search.startDate
   if (search.endDate) params.endDate = search.endDate
+  if (search.categoryId) params.categoryId = search.categoryId
   if (search.createdFrom) params.createdFrom = search.createdFrom
   if (search.createdTo) params.createdTo = search.createdTo
   if (search.sortBy) params.sortBy = search.sortBy as PlanSortField
@@ -217,6 +220,7 @@ function countActiveFilters(search: PlanSearch): number {
   if (search.createdFrom) count++
   if (search.createdTo) count++
   if (search.creator) count++
+  if (search.categoryId) count++
   if (search.planKinds.length) count++
   if (search.reports.length === 1) count++
   if (search.duplicateSlots) count++
@@ -227,6 +231,7 @@ function countActiveFilters(search: PlanSearch): number {
 function buildFilterChips(
   search: PlanSearch,
   creatorName: string | undefined,
+  categoryName: string | undefined,
   updateSearch: (patch: Partial<PlanSearch>) => void,
 ): Array<FilterChip> {
   const chips: Array<FilterChip> = []
@@ -296,6 +301,14 @@ function buildFilterChips(
       id: 'duplicateSlots',
       label: 'Duplicate slots',
       onRemove: () => updateSearch({ duplicateSlots: undefined }),
+    })
+  }
+
+  if (search.categoryId) {
+    chips.push({
+      id: 'categoryId',
+      label: `Category: ${categoryName ?? search.categoryId}`,
+      onRemove: () => updateSearch({ categoryId: undefined }),
     })
   }
 
@@ -390,6 +403,7 @@ function planSearchToUrl(
   if (search.endDate) url.endDate = search.endDate
   if (search.createdFrom) url.createdFrom = search.createdFrom
   if (search.createdTo) url.createdTo = search.createdTo
+  if (search.categoryId) url.categoryId = search.categoryId
   if (search.duplicateSlots) url.duplicateSlots = true
 
   const type = serializeMultiSearchParam(search.type ?? [])
@@ -499,6 +513,21 @@ function PlansPage() {
     enabled: !!userSearchParams?.query,
   })
 
+  const {
+    data: categoriesData,
+    isLoading: isCategoriesLoading,
+    isError: isCategoriesError,
+  } = useQuery(getPlanCategoriesOptions())
+
+  const categories: Array<PlanCategory> =
+    categoriesData?.data?.categories?.filter(
+      (cat) => cat.status !== 'DISABLED',
+    ) ?? []
+
+  const selectedCategoryName = search.categoryId
+    ? categories.find((cat) => cat.id === search.categoryId)?.name
+    : undefined
+
   const plans = (data?.data?.plans as Array<any>) ?? []
   const pagination = data?.data?.pagination
   const totalPlans = pagination?.totalItems ?? 0
@@ -594,7 +623,12 @@ function PlansPage() {
     userSearchInput ||
     undefined
 
-  const filterChips = buildFilterChips(search, creatorDisplayName, updateSearch)
+  const filterChips = buildFilterChips(
+    search,
+    creatorDisplayName,
+    selectedCategoryName,
+    updateSearch,
+  )
 
   const handleSortChange = React.useCallback(
     (sortBy: PlanSortField, sortOrder: 'asc' | 'desc') => {
@@ -795,6 +829,56 @@ function PlansPage() {
                             </SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium text-muted-foreground">
+                          Category
+                        </Label>
+                        <Select
+                          value={search.categoryId?.toString() ?? ''}
+                          onValueChange={(value) =>
+                            updateSearch({
+                              categoryId: value ? Number(value) : undefined,
+                            })
+                          }
+                          disabled={isCategoriesLoading || isCategoriesError}
+                        >
+                          <SelectTrigger className="h-8 w-full text-xs">
+                            <SelectValue
+                              placeholder={
+                                isCategoriesLoading
+                                  ? 'Loading categories...'
+                                  : isCategoriesError
+                                    ? 'Failed to load categories'
+                                    : 'All'
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">All</SelectItem>
+                            {categories.map((cat) => (
+                              <SelectItem
+                                key={cat.id}
+                                value={cat.id.toString()}
+                              >
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {isCategoriesError && (
+                          <p className="text-[10px] text-destructive leading-snug">
+                            Could not load categories. Try reloading the page.
+                          </p>
+                        )}
+                        {!isCategoriesLoading &&
+                          !isCategoriesError &&
+                          categories.length === 0 && (
+                            <p className="text-[10px] text-muted-foreground leading-snug">
+                              No categories available.
+                            </p>
+                          )}
                       </div>
 
                       <MultiFilterGroup
