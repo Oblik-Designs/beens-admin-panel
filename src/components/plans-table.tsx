@@ -6,6 +6,7 @@ import { CalendarIcon, MapPinIcon, UserIcon } from 'lucide-react'
 import type { Plan, PlanSortField } from '@/server/api/plans'
 import { planColumns } from '@/constants/planDataColumns'
 import { DetailSheet } from '@/components/detail-sheet'
+import { PlanCodesSheet } from '@/components/plan-codes-sheet'
 import { TableWithPagination } from '@/components/table-with-pagination'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -113,6 +114,9 @@ export function PlansTable({
   const [pendingSuspend, setPendingSuspend] = React.useState<Plan | null>(null)
   const [suspendReason, setSuspendReason] = React.useState('')
   const [suspendError, setSuspendError] = React.useState<string | null>(null)
+
+  const [codesOpen, setCodesOpen] = React.useState(false)
+  const [codesPlanId, setCodesPlanId] = React.useState<string | null>(null)
 
   const queryClient = useQueryClient()
 
@@ -530,6 +534,17 @@ export function PlansTable({
                   {plan.maxParticipants ? ` / ${plan.maxParticipants}` : ''}
                 </span>
               </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setCodesPlanId(plan._id)
+                  setCodesOpen(true)
+                }}
+              >
+                Manage codes
+              </Button>
               {(!Array.isArray(plan.currentParticipants) ||
                 plan.currentParticipants.length === 0) && (
                 <p className="text-sm text-muted-foreground">
@@ -705,6 +720,12 @@ export function PlansTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PlanCodesSheet
+        open={codesOpen}
+        onOpenChange={setCodesOpen}
+        planId={codesPlanId}
+      />
     </>
   )
 }

@@ -225,3 +225,147 @@ export const suspendAndRefundPlan = createServerFn({
   )
   return result
 })
+
+// ─── Plan code management (admin) ───────────────────────────────────
+
+export interface PlanCodeMutationResponse {
+  success: boolean
+  data: any
+}
+
+export type PlanCodeType = 'start' | 'end'
+
+export interface PlanCodeEntry {
+  entryId: string
+  participantId: string | null
+  displayName: string | null
+  participantStatus: string | null
+  startCode: string | null
+  startCodeGeneratedAt: string | null
+  startCodeEnteredAt: string | null
+  startCodeAttempts: number
+  endCode: string | null
+  endCodeGeneratedAt: string | null
+  endCodeEnteredAt: string | null
+  endCodeAttempts: number
+}
+
+export interface PlanCodesData {
+  planId: string
+  title: string | null
+  type: string | null
+  status: string | null
+  isRecurring: boolean
+  parentPlanId: string | null
+  startDate: string | null
+  endDate: string | null
+  timezone: string | null
+  minsToStart: number | null
+  minsToEnd: number | null
+  entries: Array<PlanCodeEntry>
+}
+
+export interface PlanCodesResponse {
+  success: boolean
+  data: PlanCodesData
+}
+
+export const getPlanCodes = createServerFn({ method: 'GET' }).handler(
+  async (ctx) => {
+    const { planId } = (ctx.data ?? {}) as { planId?: string }
+    if (!planId) throw new Error('Plan ID is required')
+    return await apiClient.get<PlanCodesResponse>(
+      `/admin/plans/${planId}/codes`,
+    )
+  },
+)
+
+export interface IssuePlanCodeParams {
+  planId: string
+  type: PlanCodeType
+  participantId?: string
+  code?: string
+  regenerate?: boolean
+}
+
+export const issuePlanCode = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const p = ctx.data as IssuePlanCodeParams | undefined
+    if (!p?.planId) throw new Error('Plan ID is required')
+    return await apiClient.post<PlanCodeMutationResponse>(`/admin/plans/${p.planId}/codes/issue`, {
+      type: p.type,
+      participantId: p.participantId,
+      code: p.code,
+      regenerate: p.regenerate,
+    })
+  },
+)
+
+export interface ResendPlanCodeParams {
+  planId: string
+  type: PlanCodeType
+  participantId: string
+}
+
+export const resendPlanCode = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const p = ctx.data as ResendPlanCodeParams | undefined
+    if (!p?.planId) throw new Error('Plan ID is required')
+    return await apiClient.post<PlanCodeMutationResponse>(`/admin/plans/${p.planId}/codes/resend`, {
+      type: p.type,
+      participantId: p.participantId,
+    })
+  },
+)
+
+export interface SetPlanStatusParams {
+  planId: string
+  status: 'Active' | 'In Progress' | 'Completed' | 'Cancelled'
+}
+
+export const setPlanStatus = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const p = ctx.data as SetPlanStatusParams | undefined
+    if (!p?.planId) throw new Error('Plan ID is required')
+    return await apiClient.post<PlanCodeMutationResponse>(`/admin/plans/${p.planId}/status`, {
+      status: p.status,
+    })
+  },
+)
+
+export interface MarkParticipantParams {
+  planId: string
+  participantId: string
+  stage: 'present' | 'completed'
+}
+
+export const markParticipant = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const p = ctx.data as MarkParticipantParams | undefined
+    if (!p?.planId || !p.participantId) {
+      throw new Error('Plan ID and participant ID are required')
+    }
+    return await apiClient.post<PlanCodeMutationResponse>(`/admin/plans/${p.planId}/participants/${p.participantId}/mark`,
+      { stage: p.stage },
+    )
+  },
+)
+
+export interface SetPlanScheduleParams {
+  planId: string
+  startDate?: string
+  endDate?: string
+  timezone?: string
+}
+
+export const setPlanSchedule = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const p = ctx.data as SetPlanScheduleParams | undefined
+    if (!p?.planId) throw new Error('Plan ID is required')
+    return await apiClient.post<PlanCodeMutationResponse>(`/admin/plans/${p.planId}/schedule`, {
+      startDate: p.startDate,
+      endDate: p.endDate,
+      timezone: p.timezone,
+    })
+  },
+)
