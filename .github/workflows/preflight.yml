@@ -1,0 +1,57 @@
+# ──────────────────────────────────────────────────────────────
+# Pre-Flight Check
+# ──────────────────────────────────────────────────────────────
+# Runs on every PR targeting `uat`.
+# 1. Installs dependencies with bun
+# 2. Runs TypeScript type checking (tsc --noEmit)
+# 3. Verifies the Nitro/TanStack Start bundle compiles (no env
+#    vars needed — missing VITE_* are substituted as undefined
+#    at build time, which is acceptable for a compile gate)
+#
+# No secrets required — purely static checks.
+# ──────────────────────────────────────────────────────────────
+
+name: Pre-Flight Check
+
+on:
+  pull_request:
+    branches: [uat]
+  # Called by deploy.yml so the deploy gate re-runs the same checks
+  workflow_call:
+
+concurrency:
+  group: preflight-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    name: Type Check & Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Setup Bun ─────────────────────────────────────────
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # ── Install ───────────────────────────────────────────
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # ── Type check ────────────────────────────────────────
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      # ── Build gate ────────────────────────────────────────
+      # Verifies the Nitro bundle compiles cleanly.
+      # Missing VITE_* vars are substituted as undefined —
+      # the build still compiles; real values are only needed
+      # at runtime on the EC2.
+      - name: Build
+        run: bun run build
