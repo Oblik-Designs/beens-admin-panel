@@ -78,7 +78,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuButton className="data-[slot=sidebar-menu-button]:p-1.5! data-[slot=sidebar-menu-button]:min-h-20!">
                 <div className="flex size-52 items-center justify-center">
                   <img
-                    src="/beenslogo_1.png"
+                    src="/beenslogo-uat.png"
                     alt="Beens"
                     className="size-40 object-contain object-center"
                   />
