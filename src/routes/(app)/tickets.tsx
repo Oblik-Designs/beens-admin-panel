@@ -59,6 +59,11 @@ export const ticketSearchSchema = z.object({
   type: z.string().optional(),
   status: z.string().optional(),
   priority: z.string().optional(),
+  // Phase 1 (Crisis Console) — origin discriminates human reports
+  // ("USER") from system-detected auto tickets ("AUTO"). The field
+  // is not populated by the API yet; the URL param is still parsed so
+  // we can demo + soak the UI ahead of the API.
+  origin: z.string().optional(),
   sortBy: z.enum(['priority']).default('priority'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 })
@@ -74,6 +79,7 @@ function searchToParams(
   if (search.type) params.type = search.type
   if (search.status) params.status = search.status
   if (search.priority) params.priority = search.priority
+  if (search.origin) params.origin = search.origin
   params.sortBy = search.sortBy
   params.sortOrder = search.sortOrder
 
@@ -88,6 +94,7 @@ function countActiveFilters(search: TicketSearch): number {
   if (search.status) count++
   if (search.priority) count++
   if (search.reporter) count++
+  if (search.origin) count++
   if (search.sortOrder !== 'desc') count++
   return count
 }
@@ -128,6 +135,14 @@ function buildFilterChips(
       id: 'priority',
       label: `Priority: ${search.priority}`,
       onRemove: () => updateSearch({ priority: undefined }),
+    })
+  }
+
+  if (search.origin) {
+    chips.push({
+      id: 'origin',
+      label: `Origin: ${search.origin === 'AUTO' ? 'Auto-detected' : 'User-reported'}`,
+      onRemove: () => updateSearch({ origin: undefined }),
     })
   }
 
@@ -486,6 +501,30 @@ function TicketsPage() {
                             <SelectItem value="LOW">Low</SelectItem>
                             <SelectItem value="NORMAL">Normal</SelectItem>
                             <SelectItem value="HIGH">High</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Crisis Console — Origin filter. Inert until the
+                          API ships `origin` on the Ticket model (Phase 1);
+                          the param flows through harmlessly until then. */}
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium text-muted-foreground">
+                          Origin
+                        </Label>
+                        <Select
+                          value={search.origin ?? ''}
+                          onValueChange={(value) =>
+                            updateSearch({ origin: value || undefined })
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-full text-xs">
+                            <SelectValue placeholder="All" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">All</SelectItem>
+                            <SelectItem value="USER">User-reported</SelectItem>
+                            <SelectItem value="AUTO">Auto-detected</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

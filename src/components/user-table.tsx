@@ -26,6 +26,7 @@ type UserTableProps = {
   onPageSizeChange: (pageSize: number) => void
   totalUsers: number
   isLoading?: boolean
+  onRowClick?: (user: User) => void
 }
 
 export function UserTable({
@@ -36,6 +37,7 @@ export function UserTable({
   isLoading,
   onPageChange,
   onPageSizeChange,
+  onRowClick,
 }: UserTableProps) {
   const [sheetOpen, setSheetOpen] = React.useState(false)
   const [selectedUser, setSelectedUser] = React.useState<User | null>(null)
@@ -111,6 +113,7 @@ export function UserTable({
         emptyMessage="No users found."
         loadingMessage="Loading users data..."
         isLoading={isLoading}
+        onRowClick={onRowClick}
       />
 
       <UserSheet

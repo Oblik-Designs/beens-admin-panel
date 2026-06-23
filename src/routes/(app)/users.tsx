@@ -435,6 +435,12 @@ function UsersPage() {
                   onPageSizeChange={handlePageSizeChange}
                   totalUsers={total}
                   isLoading={isFetching}
+                  onRowClick={(user) =>
+                    navigate({
+                      to: '/users/$userId',
+                      params: { userId: user._id },
+                    })
+                  }
                 />
               )}
 

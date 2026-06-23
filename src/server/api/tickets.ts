@@ -28,6 +28,13 @@ export interface Ticket {
     mimeType: string
     size: number
   }>
+  // ─── Phase 1 (Crisis Console) — landing fields ────────────────
+  // The API does not yet populate these. Tickets created before the
+  // Phase 1 migration default to `origin: "USER"` semantically; the
+  // field is optional here until the API contract ships.
+  origin?: 'USER' | 'AUTO'
+  autoRule?: string | null
+  dedupKey?: string | null
 }
 
 export interface TicketReportedTargetUser {
@@ -133,6 +140,10 @@ export interface TicketSearchParams {
   priority?: string
   reason?: string
   resolutionAction?: string
+  // Phase 1 (Crisis Console) — server-side filter accepts "USER" | "AUTO".
+  // Until the API ships the field, the param is sent harmlessly and ignored.
+  origin?: string
+  autoRule?: string
   page?: number
   limit?: number
   sortBy?: string
