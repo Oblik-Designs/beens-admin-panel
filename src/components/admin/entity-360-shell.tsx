@@ -6,11 +6,14 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 
 /**
  * Standard chrome for an entity 360 page (User / Plan / Transaction).
- * Provides the sidebar + header + grid:
- *   [ timeline column (lg) | sidebar column (md): status + remediation ]
  *
- * The route file passes the title, summary card, timeline, and
- * remediation panel as render slots — no other coupling.
+ * Layout contract:
+ *   - Page is viewport-height constrained — no page-level scroll.
+ *   - Summary card sits at its natural height at the top.
+ *   - The Timeline column owns the remaining vertical space and is
+ *     internally scrollable (the Timeline component handles its own
+ *     overflow + sticky toolbar).
+ *   - The sidebar column scrolls independently when it overflows.
  */
 export interface Entity360ShellProps {
     title: string
@@ -38,23 +41,25 @@ export function Entity360Shell({
             }
         >
             <AppSidebar variant="inset" />
-            <SidebarInset>
+            <SidebarInset className="h-svh overflow-hidden">
                 <SiteHeader title={title} subtitle={subtitle} />
 
-                <div className="flex flex-1 flex-col gap-6 p-4 lg:p-6">
-                    {summary && <section>{summary}</section>}
+                <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden p-4 lg:p-6">
+                    {summary && <section className="shrink-0">{summary}</section>}
 
-                    <div className="grid gap-6 lg:grid-cols-3">
-                        <section className="lg:col-span-2">
-                            <div className="space-y-3 rounded-lg border bg-muted/40 px-4 py-3">
-                                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                    <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-3">
+                        <section className="flex min-h-0 flex-col overflow-hidden lg:col-span-2">
+                            <div className="flex min-h-0 flex-1 flex-col gap-3 rounded-lg border bg-muted/40 px-4 py-3">
+                                <div className="shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
                                     Timeline
                                 </div>
-                                {timeline}
+                                <div className="min-h-0 flex-1">{timeline}</div>
                             </div>
                         </section>
 
-                        <aside className="space-y-4 lg:col-span-1">{sidebar}</aside>
+                        <aside className="min-h-0 space-y-4 overflow-y-auto lg:col-span-1">
+                            {sidebar}
+                        </aside>
                     </div>
                 </div>
             </SidebarInset>

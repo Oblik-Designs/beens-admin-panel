@@ -4,9 +4,14 @@ import {
     mockAuditEntries,
     mockTxnRemediationContext,
     mockUserRemediationContext,
-    mockUserTimeline,
-    mockWebhookEvents,
 } from '@/data/crisis-mocks'
+import {
+    getPlanTimeline,
+    getTransactionTimeline,
+    getUserTimeline,
+    searchWebhookEvents,
+    type WebhookEventsSearchParams,
+} from '@/server/api/crisis'
 import type {
     AdminAuditEntry,
     RemediationAction,
@@ -17,19 +22,17 @@ import type {
 } from '@/types/crisis'
 
 /**
- * Crisis Console placeholder queries.
+ * Crisis Console queries.
  *
- * Each `*Options` factory mirrors the shape we expect once the API ships
- * (Phases 1–5 of admin-crisis-implementation-plan.md). Until then:
- *   - Data comes from `data/crisis-mocks.ts` with a small `delay()` so
- *     loading states still render correctly during dev.
- *   - The mutation helpers below resolve to fixture audit-entry ids.
+ * Wired against the Phase 3 read endpoints in beens-api as of this
+ * commit (POST /admin/webhook-events + three /admin/.../timeline GETs).
+ * Audit search + remediation context + preview/apply still resolve to
+ * fixtures from `data/crisis-mocks.ts` — those land in Phases 4/5.
  *
- * Swap-out path:
- *   1. Replace each `queryFn` with `apiClient.post(...)` against the new
- *      `/admin/...` route.
- *   2. Replace the inline shape with the OpenAPI-generated response type.
- *   3. Delete this file's mock import line; the rest stays.
+ * Consumer contract: every options factory resolves to
+ * `{ success: boolean; data: <unwrapped payload> }`. The API responses
+ * are unwrapped one extra layer so the route components don't need to
+ * know whether the payload came from a mock or the real backend.
  */
 
 const SIMULATED_LATENCY_MS = 150
@@ -43,43 +46,24 @@ interface ListResult<T> {
 
 // ─── Webhook events ─────────────────────────────────────────────────
 
-interface WebhookEventsQueryParams {
-    provider?: string
-    eventName?: string
-    skipReason?: string
-    linkedTransactionId?: string
-    linkedUserId?: string
-    sinceMinutes?: number
-    limit?: number
-}
-
-export const webhookEventsOptions = (params?: WebhookEventsQueryParams) =>
+export const webhookEventsOptions = (params?: WebhookEventsSearchParams) =>
     queryOptions({
         queryKey: ['crisis', 'webhook-events', params],
         queryFn: async (): Promise<ListResult<WebhookEventSummary>> => {
-            await delay()
-            let rows = mockWebhookEvents
-            if (params?.provider) rows = rows.filter((r) => r.provider === params.provider)
-            if (params?.eventName) rows = rows.filter((r) => r.eventName === params.eventName)
-            if (params?.skipReason)
-                rows = rows.filter((r) => r.processing.skipReason === params.skipReason)
-            if (params?.linkedTransactionId)
-                rows = rows.filter(
-                    (r) => r.linkedTransactionId === params.linkedTransactionId,
-                )
-            if (params?.linkedUserId)
-                rows = rows.filter((r) => r.linkedUserId === params.linkedUserId)
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            const res = await searchWebhookEvents({ data: params ?? {} })
             return {
-                success: true,
+                success: res.success,
                 data: {
-                    rows: rows.slice(0, params?.limit ?? 20),
-                    total: rows.length,
+                    rows: res.data.webhookEvents,
+                    total: res.data.pagination.totalItems,
                 },
             }
         },
     })
 
 // ─── Admin audit ────────────────────────────────────────────────────
+// Still on mocks — no dedicated /admin/audit search endpoint until Phase 4.
 
 interface AuditQueryParams {
     targetModel?: string
@@ -114,8 +98,10 @@ export const userTimelineOptions = (userId: string | null) =>
     queryOptions({
         queryKey: ['crisis', 'timeline', 'user', userId],
         queryFn: async (): Promise<{ success: boolean; data: Array<TimelineEvent> }> => {
-            await delay()
-            return { success: true, data: mockUserTimeline }
+            if (!userId) return { success: true, data: [] }
+            // @ts-expect-error - createServerFn types don't reflect GET data parameter
+            const res = await getUserTimeline({ data: { id: userId } })
+            return { success: res.success, data: res.data.timeline }
         },
         enabled: !!userId,
     })
@@ -124,8 +110,10 @@ export const planTimelineOptions = (planId: string | null) =>
     queryOptions({
         queryKey: ['crisis', 'timeline', 'plan', planId],
         queryFn: async (): Promise<{ success: boolean; data: Array<TimelineEvent> }> => {
-            await delay()
-            return { success: true, data: mockUserTimeline }
+            if (!planId) return { success: true, data: [] }
+            // @ts-expect-error - createServerFn types don't reflect GET data parameter
+            const res = await getPlanTimeline({ data: { id: planId } })
+            return { success: res.success, data: res.data.timeline }
         },
         enabled: !!planId,
     })
@@ -134,13 +122,16 @@ export const transactionTimelineOptions = (transactionId: string | null) =>
     queryOptions({
         queryKey: ['crisis', 'timeline', 'transaction', transactionId],
         queryFn: async (): Promise<{ success: boolean; data: Array<TimelineEvent> }> => {
-            await delay()
-            return { success: true, data: mockUserTimeline.slice(0, 4) }
+            if (!transactionId) return { success: true, data: [] }
+            // @ts-expect-error - createServerFn types don't reflect GET data parameter
+            const res = await getTransactionTimeline({ data: { id: transactionId } })
+            return { success: res.success, data: res.data.timeline }
         },
         enabled: !!transactionId,
     })
 
 // ─── Remediation context (per-entity) ───────────────────────────────
+// Still on mocks — recommendation/divergence ships in Phase 4.
 
 export const remediationContextOptions = (
     targetModel: string | null,
@@ -162,6 +153,7 @@ export const remediationContextOptions = (
     })
 
 // ─── Mutation hooks — preview & apply (placeholder) ─────────────────
+// Phase 5 endpoints — still mock.
 
 export async function previewRemediationAction(
     action: RemediationAction,
