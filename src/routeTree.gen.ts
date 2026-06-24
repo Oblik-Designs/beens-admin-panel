@@ -16,6 +16,9 @@ import { Route as authLoginRouteImport } from './routes/(auth)/login'
 import { Route as appUsersRouteImport } from './routes/(app)/users'
 import { Route as appTicketsRouteImport } from './routes/(app)/tickets'
 import { Route as appPlansRouteImport } from './routes/(app)/plans'
+import { Route as appUsersUserIdRouteImport } from './routes/(app)/users_.$userId'
+import { Route as appTransactionsTransactionIdRouteImport } from './routes/(app)/transactions.$transactionId'
+import { Route as appPlansPlanIdRouteImport } from './routes/(app)/plans_.$planId'
 
 const authRouteRoute = authRouteRouteImport.update({
   id: '/(auth)',
@@ -50,6 +53,22 @@ const appPlansRoute = appPlansRouteImport.update({
   path: '/plans',
   getParentRoute: () => appRouteRoute,
 } as any)
+const appUsersUserIdRoute = appUsersUserIdRouteImport.update({
+  id: '/users_/$userId',
+  path: '/users/$userId',
+  getParentRoute: () => appRouteRoute,
+} as any)
+const appTransactionsTransactionIdRoute =
+  appTransactionsTransactionIdRouteImport.update({
+    id: '/transactions/$transactionId',
+    path: '/transactions/$transactionId',
+    getParentRoute: () => appRouteRoute,
+  } as any)
+const appPlansPlanIdRoute = appPlansPlanIdRouteImport.update({
+  id: '/plans_/$planId',
+  path: '/plans/$planId',
+  getParentRoute: () => appRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/plans': typeof appPlansRoute
@@ -57,6 +76,9 @@ export interface FileRoutesByFullPath {
   '/users': typeof appUsersRoute
   '/login': typeof authLoginRoute
   '/': typeof appIndexRoute
+  '/plans/$planId': typeof appPlansPlanIdRoute
+  '/transactions/$transactionId': typeof appTransactionsTransactionIdRoute
+  '/users/$userId': typeof appUsersUserIdRoute
 }
 export interface FileRoutesByTo {
   '/plans': typeof appPlansRoute
@@ -64,6 +86,9 @@ export interface FileRoutesByTo {
   '/users': typeof appUsersRoute
   '/login': typeof authLoginRoute
   '/': typeof appIndexRoute
+  '/plans/$planId': typeof appPlansPlanIdRoute
+  '/transactions/$transactionId': typeof appTransactionsTransactionIdRoute
+  '/users/$userId': typeof appUsersUserIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -74,12 +99,31 @@ export interface FileRoutesById {
   '/(app)/users': typeof appUsersRoute
   '/(auth)/login': typeof authLoginRoute
   '/(app)/': typeof appIndexRoute
+  '/(app)/plans_/$planId': typeof appPlansPlanIdRoute
+  '/(app)/transactions/$transactionId': typeof appTransactionsTransactionIdRoute
+  '/(app)/users_/$userId': typeof appUsersUserIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/plans' | '/tickets' | '/users' | '/login' | '/'
+  fullPaths:
+    | '/plans'
+    | '/tickets'
+    | '/users'
+    | '/login'
+    | '/'
+    | '/plans/$planId'
+    | '/transactions/$transactionId'
+    | '/users/$userId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/plans' | '/tickets' | '/users' | '/login' | '/'
+  to:
+    | '/plans'
+    | '/tickets'
+    | '/users'
+    | '/login'
+    | '/'
+    | '/plans/$planId'
+    | '/transactions/$transactionId'
+    | '/users/$userId'
   id:
     | '__root__'
     | '/(app)'
@@ -89,6 +133,9 @@ export interface FileRouteTypes {
     | '/(app)/users'
     | '/(auth)/login'
     | '/(app)/'
+    | '/(app)/plans_/$planId'
+    | '/(app)/transactions/$transactionId'
+    | '/(app)/users_/$userId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -147,6 +194,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appPlansRouteImport
       parentRoute: typeof appRouteRoute
     }
+    '/(app)/users_/$userId': {
+      id: '/(app)/users_/$userId'
+      path: '/users/$userId'
+      fullPath: '/users/$userId'
+      preLoaderRoute: typeof appUsersUserIdRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/transactions/$transactionId': {
+      id: '/(app)/transactions/$transactionId'
+      path: '/transactions/$transactionId'
+      fullPath: '/transactions/$transactionId'
+      preLoaderRoute: typeof appTransactionsTransactionIdRouteImport
+      parentRoute: typeof appRouteRoute
+    }
+    '/(app)/plans_/$planId': {
+      id: '/(app)/plans_/$planId'
+      path: '/plans/$planId'
+      fullPath: '/plans/$planId'
+      preLoaderRoute: typeof appPlansPlanIdRouteImport
+      parentRoute: typeof appRouteRoute
+    }
   }
 }
 
@@ -155,6 +223,9 @@ interface appRouteRouteChildren {
   appTicketsRoute: typeof appTicketsRoute
   appUsersRoute: typeof appUsersRoute
   appIndexRoute: typeof appIndexRoute
+  appPlansPlanIdRoute: typeof appPlansPlanIdRoute
+  appTransactionsTransactionIdRoute: typeof appTransactionsTransactionIdRoute
+  appUsersUserIdRoute: typeof appUsersUserIdRoute
 }
 
 const appRouteRouteChildren: appRouteRouteChildren = {
@@ -162,6 +233,9 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appTicketsRoute: appTicketsRoute,
   appUsersRoute: appUsersRoute,
   appIndexRoute: appIndexRoute,
+  appPlansPlanIdRoute: appPlansPlanIdRoute,
+  appTransactionsTransactionIdRoute: appTransactionsTransactionIdRoute,
+  appUsersUserIdRoute: appUsersUserIdRoute,
 }
 
 const appRouteRouteWithChildren = appRouteRoute._addFileChildren(

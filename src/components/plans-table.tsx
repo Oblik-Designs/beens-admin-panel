@@ -86,6 +86,7 @@ type PlansTableProps = {
   sortOrder?: 'asc' | 'desc'
   onSortChange?: (sortBy: PlanSortField, sortOrder: 'asc' | 'desc') => void
   onClearFilters?: () => void
+  onRowClick?: (plan: Plan) => void
 }
 
 export function PlansTable({
@@ -100,6 +101,7 @@ export function PlansTable({
   sortOrder,
   onSortChange,
   onClearFilters,
+  onRowClick,
 }: PlansTableProps) {
   const [sheetOpen, setSheetOpen] = React.useState(false)
   const [selectedCreatorId, setSelectedCreatorId] = React.useState<
@@ -265,6 +267,7 @@ export function PlansTable({
           sortOrder,
           onSortChange,
         }}
+        onRowClick={onRowClick}
         emptyMessage="No plans match these filters."
         emptyAction={
           onClearFilters ? (

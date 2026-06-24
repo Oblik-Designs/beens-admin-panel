@@ -1040,6 +1040,12 @@ function PlansPage() {
                   sortOrder={search.sortOrder}
                   onSortChange={handleSortChange}
                   onClearFilters={handleClearFilters}
+                  onRowClick={(plan) =>
+                    navigate({
+                      to: '/plans/$planId',
+                      params: { planId: plan._id },
+                    })
+                  }
                 />
               )}
 
