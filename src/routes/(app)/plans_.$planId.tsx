@@ -1,9 +1,12 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 
 import { Entity360Shell } from '@/components/admin/entity-360-shell'
+import { PlanParticipantsCard } from '@/components/admin/plan-participants-card'
+import { PlanSummaryCard } from '@/components/admin/plan-summary-card'
 import { RemediationPanel } from '@/components/admin/remediation-panel'
+import { SuspendPlanButton } from '@/components/admin/suspend-plan-button'
 import { Timeline } from '@/components/admin/timeline'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -18,8 +21,14 @@ import { getPlanByIdOptions } from '@/queries/plans'
 /**
  * Plan 360 — Phase 3 / L1 of the Crisis Console.
  *
- * Header shows the plan title + creator + current status. Timeline +
- * Remediation still come from Phase 3 placeholders.
+ * Top header carries the plan identity plus its "who / where / when"
+ * columns: Hosted by, Location, Start Schedule, End Schedule, Date
+ * Created.
+ *
+ * Sidebar stacks:
+ *   1. Plan summary — Category / Type / Status / Budget (2×2 grid)
+ *   2. Participants — avatars + manage codes + slot instances
+ *   3. Remediation panel (Xendit / Sumsub actions + Suspend at the bottom)
  */
 
 export const Route = createFileRoute('/(app)/plans_/$planId')({
@@ -43,6 +52,7 @@ function PlanDetailPage() {
     const title = (plan.title as string | undefined) ?? null
     const timelineEvents = timelineRes?.data ?? []
     const remediationContext = remediationRes?.data
+    const planReady = !planLoading && !!plan._id
 
     const actorRole = 'MANAGER' as const
 
@@ -51,41 +61,74 @@ function PlanDetailPage() {
             title={title ?? 'Plan'}
             subtitle={planId}
             summary={
-                <PlanSummaryCard plan={plan} planId={planId} isLoading={planLoading} />
+                <PlanHeaderCard plan={plan} planId={planId} isLoading={planLoading} />
             }
             timeline={
                 timelineLoading ? (
-                    <div className="h-32 animate-pulse rounded-lg border bg-muted/40" />
+                    <div className="h-full animate-pulse rounded-lg border bg-muted/40" />
                 ) : (
                     <Timeline events={timelineEvents} />
                 )
             }
             sidebar={
-                remediationContext ? (
-                    <RemediationPanel
-                        context={remediationContext}
-                        actorRole={actorRole}
-                        onPreview={previewRemediationAction}
-                        onApply={async (action, reason) => {
-                            const res = await applyRemediationAction(action, reason)
-                            return { auditEntryId: res.auditEntryId }
-                        }}
-                    />
-                ) : (
-                    <div className="h-32 animate-pulse rounded-lg border bg-muted/40" />
-                )
+                <>
+                    {planReady ? (
+                        <>
+                            <PlanSummaryCard plan={plan} />
+                            <PlanParticipantsCard plan={plan} />
+                        </>
+                    ) : (
+                        <div className="h-48 animate-pulse rounded-lg border bg-muted/40" />
+                    )}
+                    {remediationContext ? (
+                        <RemediationPanel
+                            context={remediationContext}
+                            actorRole={actorRole}
+                            onPreview={previewRemediationAction}
+                            onApply={async (action, reason) => {
+                                const res = await applyRemediationAction(
+                                    action,
+                                    reason,
+                                )
+                                return { auditEntryId: res.auditEntryId }
+                            }}
+                            footerSlot={
+                                planReady ? (
+                                    <SuspendPlanButton plan={plan} />
+                                ) : null
+                            }
+                        />
+                    ) : (
+                        <div className="h-32 animate-pulse rounded-lg border bg-muted/40" />
+                    )}
+                </>
             }
         />
     )
 }
 
-interface PlanSummaryCardProps {
+interface PlanHeaderCardProps {
     plan: Record<string, any>
     planId: string
     isLoading: boolean
 }
 
-function PlanSummaryCard({ plan, planId, isLoading }: PlanSummaryCardProps) {
+const formatDateOrFallback = (value?: string | null) => {
+    if (!value) return null
+    try {
+        const d = parseISO(value)
+        if (Number.isNaN(d.getTime())) return value
+        return format(d, 'PP')
+    } catch {
+        return value
+    }
+}
+
+/**
+ * Top header card. Plan identity + Hosted by + Location + Start
+ * Schedule + End Schedule + Date Created.
+ */
+function PlanHeaderCard({ plan, planId, isLoading }: PlanHeaderCardProps) {
     if (isLoading) {
         return (
             <div className="rounded-lg border bg-muted/40 px-4 py-3">
@@ -100,7 +143,7 @@ function PlanSummaryCard({ plan, planId, isLoading }: PlanSummaryCardProps) {
                             </div>
                         </div>
                     </div>
-                    <div className="w-64 shrink-0 space-y-1.5">
+                    <div className="w-56 shrink-0 space-y-1.5">
                         <Skeleton className="h-3 w-16" />
                         <div className="flex items-start gap-3">
                             <Skeleton className="size-10 rounded-full" />
@@ -110,26 +153,25 @@ function PlanSummaryCard({ plan, planId, isLoading }: PlanSummaryCardProps) {
                             </div>
                         </div>
                     </div>
+                    <div className="w-56 shrink-0 space-y-1.5">
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-4 w-44" />
+                    </div>
                     {Array.from({ length: 3 }).map((_, i) => (
                         <div key={i} className="w-32 shrink-0 space-y-1.5">
-                            <Skeleton className="h-3 w-14" />
+                            <Skeleton className="h-3 w-20" />
                             <Skeleton className="h-4 w-24" />
                         </div>
                     ))}
-                    <div className="flex shrink-0 items-start gap-4">
-                        {Array.from({ length: 2 }).map((_, i) => (
-                            <div key={i} className="w-24 shrink-0 space-y-1.5">
-                                <Skeleton className="h-3 w-12" />
-                                <Skeleton className="h-4 w-20" />
-                            </div>
-                        ))}
-                    </div>
                 </div>
             </div>
         )
     }
 
     const title = (plan.title as string | undefined) ?? 'Untitled plan'
+    const primaryImage = (plan.primaryImage as string | undefined) ?? undefined
+
+    // Hosted by
     const creator = (plan.creator ?? {}) as Record<string, any>
     const creatorNameRaw =
         (creator.displayName as string | undefined) ??
@@ -137,22 +179,41 @@ function PlanSummaryCard({ plan, planId, isLoading }: PlanSummaryCardProps) {
     const creatorName =
         creatorNameRaw && creatorNameRaw.length > 0 ? creatorNameRaw : null
     const creatorImage = (creator.profileImage as string | undefined) ?? undefined
-    const status = (plan.status as string | undefined) ?? null
-    const type = (plan.type as string | undefined) ?? null
-    const startDate = (plan.startDate as string | undefined) ?? null
-    const endDate = (plan.endDate as string | undefined) ?? null
-    const budget = plan.budget as { amount?: number; currency?: string } | undefined
-    const primaryImage = (plan.primaryImage as string | undefined) ?? undefined
-
     const creatorId =
         (creator._id as string | undefined) ??
         (creator.id as string | undefined) ??
         null
 
+    // Location
+    const location = plan.location ?? {}
+    const fullLocation =
+        [
+            location.address,
+            location.city,
+            location.state,
+            location.country,
+            location.zipCode,
+        ]
+            .filter(Boolean)
+            .join(', ') || null
+
+    // Schedule
+    const startDate = formatDateOrFallback(
+        plan.startDate as string | null | undefined,
+    )
+    const endDate = formatDateOrFallback(
+        plan.endDate as string | null | undefined,
+    )
+    const startTime = plan.startTime as string | undefined
+    const endTime = plan.endTime as string | undefined
+    const createdAt = formatDateOrFallback(
+        plan.createdAt as string | null | undefined,
+    )
+
     return (
         <div className="rounded-lg border bg-muted/40 px-4 py-3">
             <div className="flex flex-wrap items-start gap-6">
-                {/* Plan identity column — fixed width to match User 360 */}
+                {/* Plan identity column */}
                 <div className="w-80 shrink-0 space-y-1.5">
                     <div className="text-xs uppercase tracking-wide text-muted-foreground">
                         Plan
@@ -173,8 +234,8 @@ function PlanSummaryCard({ plan, planId, isLoading }: PlanSummaryCardProps) {
                     </div>
                 </div>
 
-                {/* Hosted by — sibling identity column, mirrors the Plan box */}
-                <div className="w-64 shrink-0 space-y-1.5">
+                {/* Hosted by — avatar + name linking to user 360 */}
+                <div className="w-56 shrink-0 space-y-1.5">
                     <div className="text-xs uppercase tracking-wide text-muted-foreground">
                         Hosted by
                     </div>
@@ -187,9 +248,19 @@ function PlanSummaryCard({ plan, planId, isLoading }: PlanSummaryCardProps) {
                                 </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0 flex-1 space-y-0.5">
-                                <div className="truncate text-sm font-semibold">
-                                    {creatorName}
-                                </div>
+                                {creatorId ? (
+                                    <Link
+                                        to="/users/$userId"
+                                        params={{ userId: creatorId }}
+                                        className="block truncate text-sm font-semibold hover:underline"
+                                    >
+                                        {creatorName}
+                                    </Link>
+                                ) : (
+                                    <div className="truncate text-sm font-semibold">
+                                        {creatorName}
+                                    </div>
+                                )}
                                 {creatorId && (
                                     <code className="block truncate text-[11px] text-muted-foreground">
                                         {creatorId}
@@ -202,39 +273,37 @@ function PlanSummaryCard({ plan, planId, isLoading }: PlanSummaryCardProps) {
                     )}
                 </div>
 
-                <StatColumn label="Status" value={status?.toLowerCase()} />
-                <StatColumn label="Type" value={type?.toLowerCase()} />
-                <StatColumn
-                    label="Budget"
-                    value={
-                        budget?.amount !== undefined
-                            ? `${budget.currency ?? 'THB'} ${budget.amount}`
-                            : undefined
-                    }
-                    mono
-                />
-
-                {/* Starts + Ends share one container so wrap behaviour keeps
-                    them on the same row. Each cell is narrower (w-24) since
-                    "Jun 30, 2026" only needs ~12ch. */}
-                <div className="flex shrink-0 items-start gap-4">
-                    <StatColumn
-                        label="Starts"
-                        value={
-                            startDate
-                                ? format(new Date(startDate), 'PP')
-                                : undefined
-                        }
-                        width="w-24"
-                    />
-                    <StatColumn
-                        label="Ends"
-                        value={
-                            endDate ? format(new Date(endDate), 'PP') : undefined
-                        }
-                        width="w-24"
-                    />
+                {/* Location — capped at 3 lines so the header row keeps a
+                    stable height; overflow scrolls inside this cell only. */}
+                <div className="w-56 shrink-0 space-y-1">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Location
+                    </div>
+                    <div
+                        className="max-h-[3.75rem] overflow-y-auto pr-1 text-sm font-medium leading-snug"
+                        title={fullLocation ?? undefined}
+                    >
+                        {fullLocation ?? '-'}
+                    </div>
                 </div>
+
+                <StatColumn
+                    label="Start Schedule"
+                    value={
+                        startDate
+                            ? `${startDate}${startTime ? ` at ${startTime}` : ''}`
+                            : null
+                    }
+                />
+                <StatColumn
+                    label="End Schedule"
+                    value={
+                        endDate
+                            ? `${endDate}${endTime ? ` at ${endTime}` : ''}`
+                            : null
+                    }
+                />
+                <StatColumn label="Date Created" value={createdAt} />
             </div>
         </div>
     )
@@ -255,11 +324,11 @@ function StatColumn({ label, value, mono, width = 'w-32' }: StatColumnProps) {
                 {label}
             </div>
             <div
-                className={`truncate ${
+                className={
                     mono
-                        ? 'font-mono text-sm font-medium tabular-nums'
-                        : 'text-sm font-medium'
-                }`}
+                        ? 'truncate font-mono text-sm font-medium tabular-nums'
+                        : 'text-sm font-medium leading-snug'
+                }
             >
                 {value && value.length > 0 ? value : '-'}
             </div>

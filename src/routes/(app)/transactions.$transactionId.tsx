@@ -64,7 +64,7 @@ function TransactionDetailPage() {
             }
             timeline={
                 timelineLoading ? (
-                    <div className="h-32 animate-pulse rounded-lg border bg-muted/40" />
+                    <div className="h-full animate-pulse rounded-lg border bg-muted/40" />
                 ) : (
                     <Timeline events={timelineEvents} />
                 )

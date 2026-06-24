@@ -53,6 +53,13 @@ export interface RemediationPanelProps {
         action: RemediationAction,
         reason: string,
     ) => Promise<{ auditEntryId: string }>
+    /**
+     * Optional render slot at the bottom of the Actions section. The
+     * User 360 sidebar uses this to attach a "Delete user" button next
+     * to the dynamic Sumsub actions without coupling the panel to that
+     * specific destructive flow.
+     */
+    footerSlot?: React.ReactNode
     className?: string
 }
 
@@ -61,6 +68,7 @@ export function RemediationPanel({
     actorRole,
     onPreview,
     onApply,
+    footerSlot,
     className,
 }: RemediationPanelProps) {
     const [activeAction, setActiveAction] =
@@ -150,6 +158,9 @@ export function RemediationPanel({
                         )
                     })}
                 </div>
+                {footerSlot && (
+                    <div className="border-t pt-3">{footerSlot}</div>
+                )}
             </div>
 
             <Sheet

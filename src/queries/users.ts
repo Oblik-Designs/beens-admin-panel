@@ -2,6 +2,7 @@ import { queryOptions } from '@tanstack/react-query'
 import type { UserSearchParams, UserUpdatePayload } from '@/server/api/users'
 import {
   deleteUser,
+  getAdminUserById,
   getProfile,
   getUserById,
   searchUsers,
@@ -22,6 +23,23 @@ export const getUserByIdOptions = (userId: string | null) =>
       if (!userId) throw new Error('User ID is required')
       // @ts-expect-error - createServerFn types don't properly reflect data parameter
       return await getUserById({ data: userId })
+    },
+    enabled: !!userId,
+  })
+
+/**
+ * Admin-side variant — full record with PII, used by the User 360 page
+ * and anywhere else that needs operator-level visibility. Same return
+ * shape as `getUserByIdOptions` so consumers stay portable; the admin
+ * server-fn unwraps `{ user, activity }` into `{ data: user, activity }`.
+ */
+export const getAdminUserByIdOptions = (userId: string | null) =>
+  queryOptions({
+    queryKey: ['users', 'admin', 'byId', userId],
+    queryFn: async () => {
+      if (!userId) throw new Error('User ID is required')
+      // @ts-expect-error - createServerFn types don't properly reflect data parameter
+      return await getAdminUserById({ data: userId })
     },
     enabled: !!userId,
   })

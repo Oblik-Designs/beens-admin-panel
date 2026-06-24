@@ -1,9 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 
+import type { User } from '@/constants/userDataColumns'
+import { DeleteUserButton } from '@/components/admin/delete-user-button'
 import { Entity360Shell } from '@/components/admin/entity-360-shell'
 import { RemediationPanel } from '@/components/admin/remediation-panel'
 import { Timeline } from '@/components/admin/timeline'
+import { UserAdminCard } from '@/components/admin/user-admin-card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -12,7 +15,7 @@ import {
     remediationContextOptions,
     userTimelineOptions,
 } from '@/queries/crisis'
-import { getUserByIdOptions } from '@/queries/users'
+import { getAdminUserByIdOptions } from '@/queries/users'
 
 /**
  * User 360 — Phase 3 / L1 of the Crisis Console.
@@ -34,7 +37,7 @@ function UserDetailPage() {
     const { userId } = Route.useParams()
 
     const { data: userRes, isLoading: userLoading } = useQuery(
-        getUserByIdOptions(userId),
+        getAdminUserByIdOptions(userId),
     )
     const { data: timelineRes, isLoading: timelineLoading } = useQuery(
         userTimelineOptions(userId),
@@ -64,25 +67,40 @@ function UserDetailPage() {
             }
             timeline={
                 timelineLoading ? (
-                    <div className="h-32 animate-pulse rounded-lg border bg-muted/40" />
+                    <div className="h-full animate-pulse rounded-lg border bg-muted/40" />
                 ) : (
                     <Timeline events={timelineEvents} />
                 )
             }
             sidebar={
-                remediationContext ? (
-                    <RemediationPanel
-                        context={remediationContext}
-                        actorRole={actorRole}
-                        onPreview={previewRemediationAction}
-                        onApply={async (action, reason) => {
-                            const res = await applyRemediationAction(action, reason)
-                            return { auditEntryId: res.auditEntryId }
-                        }}
-                    />
-                ) : (
-                    <div className="h-32 animate-pulse rounded-lg border bg-muted/40" />
-                )
+                <>
+                    {userLoading || !user._id ? (
+                        <div className="h-48 animate-pulse rounded-lg border bg-muted/40" />
+                    ) : (
+                        <UserAdminCard user={user as User} />
+                    )}
+                    {remediationContext ? (
+                        <RemediationPanel
+                            context={remediationContext}
+                            actorRole={actorRole}
+                            onPreview={previewRemediationAction}
+                            onApply={async (action, reason) => {
+                                const res = await applyRemediationAction(
+                                    action,
+                                    reason,
+                                )
+                                return { auditEntryId: res.auditEntryId }
+                            }}
+                            footerSlot={
+                                user._id ? (
+                                    <DeleteUserButton user={user as User} />
+                                ) : null
+                            }
+                        />
+                    ) : (
+                        <div className="h-32 animate-pulse rounded-lg border bg-muted/40" />
+                    )}
+                </>
             }
         />
     )
@@ -129,10 +147,19 @@ function UserSummaryCard({ user, userId, isLoading }: UserSummaryCardProps) {
                             </div>
                         </div>
                     </div>
-                    {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="w-32 shrink-0 space-y-1.5">
+                    {[
+                        { width: 'w-56', valueWidth: 'w-40' },
+                        { width: 'w-32', valueWidth: 'w-20' },
+                        { width: 'w-32', valueWidth: 'w-20' },
+                        { width: 'w-32', valueWidth: 'w-20' },
+                        { width: 'w-32', valueWidth: 'w-24' },
+                    ].map((col, i) => (
+                        <div
+                            key={i}
+                            className={`${col.width} shrink-0 space-y-1.5`}
+                        >
                             <Skeleton className="h-3 w-14" />
-                            <Skeleton className="h-4 w-20" />
+                            <Skeleton className={`h-4 ${col.valueWidth}`} />
                         </div>
                     ))}
                 </div>
@@ -142,8 +169,8 @@ function UserSummaryCard({ user, userId, isLoading }: UserSummaryCardProps) {
 
     const displayName = resolveDisplayName(user) ?? 'Unknown user'
     const email = (user.email as string | undefined) ?? null
-    const role = (user.role as string | undefined) ?? null
-    const status = (user.status as string | undefined) ?? null
+    const phone = (user.phone as string | undefined) ?? null
+    const country = (user.address?.country as string | undefined) ?? null
     const kycStatus = (user.kyc?.status as string | undefined) ?? null
     const wallet = user.wallet as number | undefined
     const profileImage = (user.profileImage as string | undefined) ?? undefined
@@ -168,18 +195,14 @@ function UserSummaryCard({ user, userId, isLoading }: UserSummaryCardProps) {
                             <code className="block truncate text-[11px] text-muted-foreground">
                                 {userId}
                             </code>
-                            {email && (
-                                <p className="truncate text-xs text-muted-foreground">
-                                    {email}
-                                </p>
-                            )}
                         </div>
                     </div>
                 </div>
 
-                <StatColumn label="Status" value={status?.toLowerCase()} />
+                <StatColumn label="Email" value={email} width="w-56" />
+                <StatColumn label="Phone" value={phone} />
+                <StatColumn label="Country" value={country} />
                 <StatColumn label="KYC" value={kycStatus?.toLowerCase()} />
-                <StatColumn label="Role" value={role?.toLowerCase()} />
                 <StatColumn
                     label="Wallet"
                     value={
@@ -198,11 +221,13 @@ interface StatColumnProps {
     label: string
     value: string | null | undefined
     mono?: boolean
+    /** Tailwind width class — default `w-32`. */
+    width?: string
 }
 
-function StatColumn({ label, value, mono }: StatColumnProps) {
+function StatColumn({ label, value, mono, width = 'w-32' }: StatColumnProps) {
     return (
-        <div className="w-32 shrink-0 space-y-1">
+        <div className={`${width} shrink-0 space-y-1`}>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">
                 {label}
             </div>

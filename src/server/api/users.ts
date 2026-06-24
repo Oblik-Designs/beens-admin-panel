@@ -21,6 +21,35 @@ export const getUserById = createServerFn({
   return result
 })
 
+/**
+ * Admin variant — calls /admin/users/:userId which returns the full
+ * unsanitised record (email, phone, address, etc.) plus a small
+ * activity rollup. The public /user/:id endpoint runs the response
+ * through `sanitizeUserForPublic` which strips PII; use this getter
+ * anywhere that needs operator-level visibility (User 360 page, etc).
+ *
+ * Response shape: { success, data: { user, activity } } — unwrapped
+ * to `{ success, data: user }` to match getUserById's contract so
+ * existing consumers stay portable.
+ */
+export const getAdminUserById = createServerFn({
+  method: 'GET',
+}).handler(async (ctx) => {
+  const id = ctx.data as string | undefined
+  if (!id) {
+    throw new Error('User ID is required')
+  }
+  const result = await apiClient.get<{
+    success: boolean
+    data: { user: any; activity: any }
+  }>(`/admin/users/${id}`)
+  return {
+    success: result.success,
+    data: result.data.user,
+    activity: result.data.activity,
+  } as { success: boolean; data: any; activity: any }
+})
+
 export interface UserSearchFilter {
   status?: string
   role?: string
