@@ -1,5 +1,6 @@
 import * as React from 'react'
-import { EyeIcon, PlayIcon, ShieldAlertIcon } from 'lucide-react'
+import { CheckCircle2Icon, EyeIcon, PlayIcon, ShieldAlertIcon } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -71,6 +72,7 @@ export function RemediationPanel({
     footerSlot,
     className,
 }: RemediationPanelProps) {
+    const queryClient = useQueryClient()
     const [activeAction, setActiveAction] =
         React.useState<RemediationAction | null>(null)
     const [previewText, setPreviewText] = React.useState<string | null>(null)
@@ -78,6 +80,10 @@ export function RemediationPanel({
     const [applyLoading, setApplyLoading] = React.useState(false)
     const [reason, setReason] = React.useState('')
     const [error, setError] = React.useState<string | null>(null)
+    const [success, setSuccess] = React.useState<{
+        action: RemediationAction
+        auditEntryId: string
+    } | null>(null)
 
     const recommended = context.actions.find((a) => a.recommended)
 
@@ -86,6 +92,7 @@ export function RemediationPanel({
         setPreviewText(null)
         setReason('')
         setError(null)
+        setSuccess(null)
         setPreviewLoading(true)
         try {
             const diff = await onPreview(action)
@@ -106,13 +113,26 @@ export function RemediationPanel({
         setError(null)
         setApplyLoading(true)
         try {
-            await onApply(activeAction, reason.trim())
-            setActiveAction(null)
+            const result = await onApply(activeAction, reason.trim())
+            setSuccess({ action: activeAction, auditEntryId: result.auditEntryId })
+            // Refetch anything that might show the new audit row (timelines
+            // pull from /admin/.../timeline which merges adminaudits; the
+            // remediation-context itself may now report a different signal
+            // if the action mutated state).
+            queryClient.invalidateQueries({ queryKey: ['crisis', 'timeline'] })
+            queryClient.invalidateQueries({
+                queryKey: ['crisis', 'remediation', context.targetModel, context.targetId],
+            })
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Apply failed')
         } finally {
             setApplyLoading(false)
         }
+    }
+
+    const handleSheetClose = () => {
+        setActiveAction(null)
+        setSuccess(null)
     }
 
     return (
@@ -166,83 +186,122 @@ export function RemediationPanel({
             <Sheet
                 open={!!activeAction}
                 onOpenChange={(open) => {
-                    if (!open) setActiveAction(null)
+                    // While the preview/apply request is in flight, ignore
+                    // dismiss attempts — otherwise an accidental outside
+                    // click, the bubbling open-click, or a focus shift
+                    // drops the in-flight result on the floor before the
+                    // operator can see it.
+                    if (previewLoading || applyLoading) return
+                    if (!open) handleSheetClose()
                 }}
             >
                 <SheetContent className="flex flex-col gap-4">
                     <SheetHeader>
                         <SheetTitle>{activeAction?.label}</SheetTitle>
                         <SheetDescription>
-                            Preview the change first. Apply requires a reason — it goes into the
-                            audit log.
+                            {success
+                                ? 'Applied. The audit log has captured this action.'
+                                : 'Preview the change first. Apply requires a reason — it goes into the audit log.'}
                         </SheetDescription>
                     </SheetHeader>
 
                     <div className="flex-1 space-y-3 overflow-y-auto px-4">
-                        <div className="space-y-1">
-                            <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                                Preview
-                            </Label>
-                            <div className="min-h-20 rounded-md border bg-muted/30 p-3 text-xs">
-                                {previewLoading ? (
-                                    <span className="text-muted-foreground">
-                                        Computing preview…
+                        {success ? (
+                            <div className="space-y-2 rounded-md border border-emerald-300 bg-emerald-50/60 p-3 text-xs text-emerald-900 dark:border-emerald-700/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2Icon className="size-4" />
+                                    <span className="font-medium">
+                                        {success.action.label} — applied
                                     </span>
-                                ) : previewText ? (
+                                </div>
+                                {previewText && (
                                     <pre className="whitespace-pre-wrap font-mono leading-relaxed">
                                         {previewText}
                                     </pre>
-                                ) : (
-                                    <span className="text-muted-foreground">
-                                        No preview yet.
-                                    </span>
+                                )}
+                                {success.auditEntryId && (
+                                    <p className="text-[11px] opacity-80">
+                                        Audit entry:{' '}
+                                        <code className="font-mono">
+                                            {success.auditEntryId}
+                                        </code>
+                                    </p>
                                 )}
                             </div>
-                        </div>
+                        ) : (
+                            <>
+                                <div className="space-y-1">
+                                    <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                        Preview
+                                    </Label>
+                                    <div className="min-h-20 rounded-md border bg-muted/30 p-3 text-xs">
+                                        {previewLoading ? (
+                                            <span className="text-muted-foreground">
+                                                Computing preview…
+                                            </span>
+                                        ) : previewText ? (
+                                            <pre className="whitespace-pre-wrap font-mono leading-relaxed">
+                                                {previewText}
+                                            </pre>
+                                        ) : (
+                                            <span className="text-muted-foreground">
+                                                No preview yet.
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
 
-                        <div className="space-y-1">
-                            <Label
-                                htmlFor="remediation-reason"
-                                className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
-                            >
-                                Reason (required)
-                            </Label>
-                            <Textarea
-                                id="remediation-reason"
-                                value={reason}
-                                onChange={(e) => setReason(e.target.value)}
-                                placeholder="Why is this remediation needed? Link the ticket or incident."
-                                rows={4}
-                                className="text-xs"
-                            />
-                        </div>
+                                <div className="space-y-1">
+                                    <Label
+                                        htmlFor="remediation-reason"
+                                        className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+                                    >
+                                        Reason (required)
+                                    </Label>
+                                    <Textarea
+                                        id="remediation-reason"
+                                        value={reason}
+                                        onChange={(e) => setReason(e.target.value)}
+                                        placeholder="Why is this remediation needed? Link the ticket or incident."
+                                        rows={4}
+                                        className="text-xs"
+                                    />
+                                </div>
 
-                        {error && (
-                            <p className="text-xs text-destructive" role="alert">
-                                {error}
-                            </p>
+                                {error && (
+                                    <p className="text-xs text-destructive" role="alert">
+                                        {error}
+                                    </p>
+                                )}
+                            </>
                         )}
                     </div>
 
                     <SheetFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setActiveAction(null)}
-                            disabled={applyLoading}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleApply}
-                            disabled={
-                                applyLoading ||
-                                !reason.trim() ||
-                                !activeAction ||
-                                !canApply(actorRole, activeAction.minRole)
-                            }
-                        >
-                            {applyLoading ? 'Applying…' : 'Apply'}
-                        </Button>
+                        {success ? (
+                            <Button onClick={handleSheetClose}>Close</Button>
+                        ) : (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    onClick={handleSheetClose}
+                                    disabled={applyLoading}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleApply}
+                                    disabled={
+                                        applyLoading ||
+                                        !reason.trim() ||
+                                        !activeAction ||
+                                        !canApply(actorRole, activeAction.minRole)
+                                    }
+                                >
+                                    {applyLoading ? 'Applying…' : 'Apply'}
+                                </Button>
+                            </>
+                        )}
                     </SheetFooter>
                 </SheetContent>
             </Sheet>
@@ -276,7 +335,17 @@ function ActionRow({ action, canApply: actorCanApply, onOpen }: ActionRowProps) 
                 size="sm"
                 variant={action.recommended ? 'default' : 'outline'}
                 disabled={!actorCanApply}
-                onClick={onOpen}
+                onPointerDown={(e) => {
+                    // Stop the open-click from bubbling into the Radix
+                    // overlay that's about to mount — otherwise the same
+                    // pointer event is interpreted as "click outside the
+                    // dialog" and dismisses it immediately.
+                    e.stopPropagation()
+                }}
+                onClick={(e) => {
+                    e.stopPropagation()
+                    onOpen()
+                }}
                 title={
                     actorCanApply
                         ? undefined
