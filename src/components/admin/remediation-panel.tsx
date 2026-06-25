@@ -123,6 +123,11 @@ export function RemediationPanel({
             queryClient.invalidateQueries({
                 queryKey: ['crisis', 'remediation', context.targetModel, context.targetId],
             })
+            // Bust the entity-detail cache the parent 360 route reads from
+            // (User Admin card, Plan summary, Transaction header). Without
+            // this, the action changed the DB but the sidebar shows stale
+            // pre-action state until manual refresh.
+            queryClient.invalidateQueries({ queryKey: entityCacheKey(context.targetModel) })
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Apply failed')
         } finally {
@@ -307,6 +312,25 @@ export function RemediationPanel({
             </Sheet>
         </div>
     )
+}
+
+/** Coarse query-key prefix for each entity 360. Apply mutations need
+ * to bust the entity-detail cache so the sidebar/header reflects the
+ * change without a manual refresh. The crisis-* queries handle
+ * themselves (timeline + remediation-context invalidations above);
+ * this covers the rest. Broad prefix is intentional — any per-entity
+ * derived query also refetches, which is what we want here. */
+function entityCacheKey(targetModel: RemediationContext['targetModel']) {
+    switch (targetModel) {
+        case 'User':
+            return ['users']
+        case 'Plan':
+            return ['plans']
+        case 'Transaction':
+            return ['transactions']
+        default:
+            return [targetModel.toLowerCase()]
+    }
 }
 
 interface ActionRowProps {
