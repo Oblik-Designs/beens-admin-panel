@@ -9,8 +9,11 @@ import {
     getUserTimeline,
     reconcileTransaction,
     replayWebhookEvent,
+    resendOtp,
     resyncKyc,
     searchWebhookEvents,
+    unstickIncomplete,
+    verifyContact,
     type WebhookEventsSearchParams,
 } from '@/server/api/crisis'
 import type {
@@ -278,6 +281,62 @@ export async function previewRemediationAction(
             'Dry run — click Apply with a reason to write.',
         ].join('\n')
     }
+    if (action.key === 'resend_otp') {
+        const userId = context.targetModel === 'User' ? context.targetId : null
+        if (!userId) {
+            return 'Cannot resend OTP: this action targets a user.'
+        }
+        const res = await resendOtp({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { userId, channel: 'auto', dryRun: true },
+        })
+        const d = res.data
+        return [
+            d.summary,
+            d.channel
+                ? `Will send via ${d.channel} to ${d.maskedContact ?? '(unknown)'}.`
+                : 'No channel available.',
+            'Dry run — click Apply with a reason to actually send.',
+        ]
+            .filter(Boolean)
+            .join('\n')
+    }
+    if (action.key === 'verify_contact') {
+        const userId = context.targetModel === 'User' ? context.targetId : null
+        if (!userId) {
+            return 'Cannot verify contact: this action targets a user.'
+        }
+        // Default Preview to both flags so the operator sees the full
+        // candidate diff — Apply lets them narrow it down if needed.
+        const res = await verifyContact({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { userId, verifyEmail: true, verifyPhone: true, dryRun: true },
+        })
+        const d = res.data
+        return [
+            d.summary,
+            `Before: email=${d.before.isEmailVerified} / phone=${d.before.isPhoneVerified}`,
+            `After:  email=${d.after.isEmailVerified} / phone=${d.after.isPhoneVerified}`,
+            'Dry run — click Apply with a reason to write.',
+        ].join('\n')
+    }
+    if (action.key === 'unstick_incomplete') {
+        const userId = context.targetModel === 'User' ? context.targetId : null
+        if (!userId) {
+            return 'Cannot unstick: this action targets a user.'
+        }
+        const res = await unstickIncomplete({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { userId, dryRun: true },
+        })
+        const d = res.data
+        return [
+            d.summary,
+            `Before: status=${d.before.status ?? '(none)'}`,
+            `After:  status=${d.after.status ?? '(none)'}`,
+            'Dry run — click Apply with a reason to write.',
+        ].join('\n')
+    }
     await delay(200)
     return `Would call: ${action.key}\n${PLACEHOLDER_PREVIEW}`
 }
@@ -345,6 +404,54 @@ export async function applyRemediationAction(
             throw new Error('Cannot allow resubmit: this action targets a user.')
         }
         const res = await allowKycResubmit({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { userId, dryRun: false, reason },
+        })
+        return {
+            success: res.success,
+            result: 'APPLIED',
+            auditEntryId: res.data.auditEntryId ?? '',
+            diffSummary: res.data.summary,
+        }
+    }
+    if (action.key === 'resend_otp') {
+        const userId = context.targetModel === 'User' ? context.targetId : null
+        if (!userId) {
+            throw new Error('Cannot resend OTP: this action targets a user.')
+        }
+        const res = await resendOtp({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { userId, channel: 'auto', dryRun: false, reason },
+        })
+        return {
+            success: res.success,
+            result: 'APPLIED',
+            auditEntryId: res.data.auditEntryId ?? '',
+            diffSummary: res.data.summary,
+        }
+    }
+    if (action.key === 'verify_contact') {
+        const userId = context.targetModel === 'User' ? context.targetId : null
+        if (!userId) {
+            throw new Error('Cannot verify contact: this action targets a user.')
+        }
+        const res = await verifyContact({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { userId, verifyEmail: true, verifyPhone: true, dryRun: false, reason },
+        })
+        return {
+            success: res.success,
+            result: 'APPLIED',
+            auditEntryId: res.data.auditEntryId ?? '',
+            diffSummary: res.data.summary,
+        }
+    }
+    if (action.key === 'unstick_incomplete') {
+        const userId = context.targetModel === 'User' ? context.targetId : null
+        if (!userId) {
+            throw new Error('Cannot unstick: this action targets a user.')
+        }
+        const res = await unstickIncomplete({
             // @ts-expect-error - createServerFn types don't reflect POST data parameter
             data: { userId, dryRun: false, reason },
         })

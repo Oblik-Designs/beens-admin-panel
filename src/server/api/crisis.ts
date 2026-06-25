@@ -292,3 +292,112 @@ export const allowKycResubmit = createServerFn({ method: 'POST' }).handler(
         )
     },
 )
+
+// ─── POST /admin/users/:id/resend-otp (Phase 5c) ────────────────────
+
+export interface ResendOtpRequest {
+    userId: string
+    channel?: 'phone' | 'email' | 'auto'
+    dryRun: boolean
+    reason?: string
+}
+
+export interface ResendOtpResponse {
+    success: boolean
+    data: {
+        userId: string
+        dryRun: boolean
+        channel: 'phone' | 'email' | null
+        maskedContact: string | null
+        sent: boolean
+        summary: string
+        auditEntryId: string | null
+    }
+}
+
+export const resendOtp = createServerFn({ method: 'POST' }).handler(
+    async (ctx) => {
+        const { userId, channel, dryRun, reason } = (ctx.data ?? {}) as ResendOtpRequest
+        if (!userId) throw new Error('userId is required')
+        return await apiClient.post<ResendOtpResponse>(
+            `/admin/users/${encodeURIComponent(userId)}/resend-otp`,
+            { channel, dryRun, reason },
+        )
+    },
+)
+
+// ─── POST /admin/users/:id/verify-contact (Phase 5c) ────────────────
+
+export interface VerifyContactRequest {
+    userId: string
+    verifyEmail?: boolean
+    verifyPhone?: boolean
+    dryRun: boolean
+    reason?: string
+}
+
+interface ContactSnapshot {
+    isEmailVerified: boolean
+    isPhoneVerified: boolean
+}
+
+export interface VerifyContactResponse {
+    success: boolean
+    data: {
+        userId: string
+        dryRun: boolean
+        before: ContactSnapshot
+        after: ContactSnapshot
+        changed: boolean
+        summary: string
+        auditEntryId: string | null
+    }
+}
+
+export const verifyContact = createServerFn({ method: 'POST' }).handler(
+    async (ctx) => {
+        const { userId, verifyEmail, verifyPhone, dryRun, reason } =
+            (ctx.data ?? {}) as VerifyContactRequest
+        if (!userId) throw new Error('userId is required')
+        return await apiClient.post<VerifyContactResponse>(
+            `/admin/users/${encodeURIComponent(userId)}/verify-contact`,
+            { verifyEmail, verifyPhone, dryRun, reason },
+        )
+    },
+)
+
+// ─── POST /admin/users/:id/unstick-incomplete (Phase 5c) ────────────
+
+export interface UnstickIncompleteRequest {
+    userId: string
+    dryRun: boolean
+    reason?: string
+}
+
+interface StatusSnapshot {
+    status: string | null
+}
+
+export interface UnstickIncompleteResponse {
+    success: boolean
+    data: {
+        userId: string
+        dryRun: boolean
+        before: StatusSnapshot
+        after: StatusSnapshot
+        changed: boolean
+        summary: string
+        auditEntryId: string | null
+    }
+}
+
+export const unstickIncomplete = createServerFn({ method: 'POST' }).handler(
+    async (ctx) => {
+        const { userId, dryRun, reason } = (ctx.data ?? {}) as UnstickIncompleteRequest
+        if (!userId) throw new Error('userId is required')
+        return await apiClient.post<UnstickIncompleteResponse>(
+            `/admin/users/${encodeURIComponent(userId)}/unstick-incomplete`,
+            { dryRun, reason },
+        )
+    },
+)
