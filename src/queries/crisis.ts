@@ -1,12 +1,9 @@
 import { queryOptions } from '@tanstack/react-query'
 
-import {
-    mockAuditEntries,
-    mockTxnRemediationContext,
-    mockUserRemediationContext,
-} from '@/data/crisis-mocks'
+import { mockAuditEntries } from '@/data/crisis-mocks'
 import {
     getPlanTimeline,
+    getRemediationContext,
     getTransactionTimeline,
     getUserTimeline,
     searchWebhookEvents,
@@ -14,6 +11,7 @@ import {
 } from '@/server/api/crisis'
 import type {
     AdminAuditEntry,
+    AuditTargetModel,
     RemediationAction,
     RemediationApplyResponse,
     RemediationContext,
@@ -131,22 +129,38 @@ export const transactionTimelineOptions = (transactionId: string | null) =>
     })
 
 // ─── Remediation context (per-entity) ───────────────────────────────
-// Still on mocks — recommendation/divergence ships in Phase 4.
+// Wired against POST /admin/remediation-context (Phase 4). The endpoint
+// reads entity state + most recent linked webhook event, computes a
+// signal key from `shared/crisis-copy.ts`, and returns the operator-
+// facing summary + recommended actions. Empty `summary` + empty
+// `actions` means "no signal matched" — the panel should render
+// nothing (or a quiet empty state).
 
 export const remediationContextOptions = (
-    targetModel: string | null,
+    targetModel: AuditTargetModel | null,
     targetId: string | null,
 ) =>
     queryOptions({
         queryKey: ['crisis', 'remediation', targetModel, targetId],
-        queryFn: async (): Promise<{ success: boolean; data: RemediationContext }> => {
-            await delay()
+        queryFn: async (): Promise<{
+            success: boolean
+            data: RemediationContext | null
+        }> => {
+            if (!targetModel || !targetId) return { success: true, data: null }
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            const res = await getRemediationContext({ data: { targetModel, targetId } })
+            if (!res.data.summary || res.data.actions.length === 0) {
+                return { success: res.success, data: null }
+            }
             return {
-                success: true,
-                data:
-                    targetModel === 'User'
-                        ? mockUserRemediationContext
-                        : mockTxnRemediationContext,
+                success: res.success,
+                data: {
+                    targetModel: res.data.targetModel,
+                    targetId: res.data.targetId,
+                    summary: res.data.summary,
+                    divergence: res.data.divergence ?? undefined,
+                    actions: res.data.actions as Array<RemediationAction>,
+                },
             }
         },
         enabled: !!targetModel && !!targetId,

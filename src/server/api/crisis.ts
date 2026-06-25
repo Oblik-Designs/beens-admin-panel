@@ -1,7 +1,12 @@
 import { createServerFn } from '@tanstack/react-start'
 import { apiClient } from '../client'
 
-import type { TimelineEvent, WebhookEventSummary } from '@/types/crisis'
+import type {
+    AuditTargetModel,
+    RemediationContext,
+    TimelineEvent,
+    WebhookEventSummary,
+} from '@/types/crisis'
 
 /**
  * Server-fn wrappers for the Phase 3 admin 360 read endpoints (see
@@ -96,6 +101,38 @@ export const getTransactionTimeline = createServerFn({ method: 'GET' }).handler(
                 `/admin/transactions/${encodeURIComponent(id)}/timeline`,
                 limit,
             ),
+        )
+    },
+)
+
+// ─── POST /admin/remediation-context ────────────────────────────────
+
+interface RemediationContextRequest {
+    targetModel: AuditTargetModel
+    targetId: string
+}
+
+interface RemediationContextResponse {
+    success: boolean
+    data: {
+        targetModel: AuditTargetModel
+        targetId: string
+        summary: string
+        signalKey: string | null
+        divergence?: RemediationContext['divergence'] | null
+        actions: RemediationContext['actions']
+    }
+}
+
+export const getRemediationContext = createServerFn({ method: 'POST' }).handler(
+    async (ctx) => {
+        const { targetModel, targetId } = (ctx.data ?? {}) as RemediationContextRequest
+        if (!targetModel || !targetId) {
+            throw new Error('targetModel and targetId are required')
+        }
+        return await apiClient.post<RemediationContextResponse>(
+            '/admin/remediation-context',
+            { targetModel, targetId },
         )
     },
 )
