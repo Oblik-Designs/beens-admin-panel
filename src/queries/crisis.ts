@@ -2,12 +2,14 @@ import { queryOptions } from '@tanstack/react-query'
 
 import { mockAuditEntries } from '@/data/crisis-mocks'
 import {
+    allowKycResubmit,
     getPlanTimeline,
     getRemediationContext,
     getTransactionTimeline,
     getUserTimeline,
     reconcileTransaction,
     replayWebhookEvent,
+    resyncKyc,
     searchWebhookEvents,
     type WebhookEventsSearchParams,
 } from '@/server/api/crisis'
@@ -236,6 +238,46 @@ export async function previewRemediationAction(
             .filter(Boolean)
             .join('\n')
     }
+    if (action.key === 'resync_kyc') {
+        const userId = context.targetModel === 'User' ? context.targetId : null
+        if (!userId) {
+            return 'Cannot resync KYC: this action targets a user.'
+        }
+        const res = await resyncKyc({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { userId, dryRun: true },
+        })
+        const d = res.data
+        return [
+            d.summary,
+            `Sumsub review status: ${d.sumsubReviewStatus || '(none)'}`,
+            `Before: ${d.before.status ?? 'NOT_STARTED'} / ${d.before.verificationStatus ?? 'UNVERIFIED'}`,
+            `After:  ${d.after.status ?? 'NOT_STARTED'} / ${d.after.verificationStatus ?? 'UNVERIFIED'}`,
+            d.requiresReinitiation
+                ? '(Sumsub reports the user needs a fresh SDK session)'
+                : '',
+            'Dry run — click Apply with a reason to write.',
+        ]
+            .filter(Boolean)
+            .join('\n')
+    }
+    if (action.key === 'allow_kyc_resubmit') {
+        const userId = context.targetModel === 'User' ? context.targetId : null
+        if (!userId) {
+            return 'Cannot allow resubmit: this action targets a user.'
+        }
+        const res = await allowKycResubmit({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { userId, dryRun: true },
+        })
+        const d = res.data
+        return [
+            d.summary,
+            `Before: ${d.before.status ?? 'NOT_STARTED'} / applicant=${d.before.sumsubApplicantId ?? '(none)'}`,
+            `After:  NOT_STARTED / applicant=(cleared)`,
+            'Dry run — click Apply with a reason to write.',
+        ].join('\n')
+    }
     await delay(200)
     return `Would call: ${action.key}\n${PLACEHOLDER_PREVIEW}`
 }
@@ -279,6 +321,38 @@ export async function applyRemediationAction(
             diffSummary: divergence.matches
                 ? `Re-pulled Xendit — DB and provider agree (${divergence.dbStatus}).`
                 : `Re-pulled Xendit — divergence: DB=${divergence.dbStatus} vs provider=${divergence.providerStatus}.`,
+        }
+    }
+    if (action.key === 'resync_kyc') {
+        const userId = context.targetModel === 'User' ? context.targetId : null
+        if (!userId) {
+            throw new Error('Cannot resync KYC: this action targets a user.')
+        }
+        const res = await resyncKyc({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { userId, dryRun: false, reason },
+        })
+        return {
+            success: res.success,
+            result: 'APPLIED',
+            auditEntryId: res.data.auditEntryId ?? '',
+            diffSummary: res.data.summary,
+        }
+    }
+    if (action.key === 'allow_kyc_resubmit') {
+        const userId = context.targetModel === 'User' ? context.targetId : null
+        if (!userId) {
+            throw new Error('Cannot allow resubmit: this action targets a user.')
+        }
+        const res = await allowKycResubmit({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { userId, dryRun: false, reason },
+        })
+        return {
+            success: res.success,
+            result: 'APPLIED',
+            auditEntryId: res.data.auditEntryId ?? '',
+            diffSummary: res.data.summary,
         }
     }
     await delay(400)

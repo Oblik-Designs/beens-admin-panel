@@ -212,3 +212,83 @@ export const reconcileTransaction = createServerFn({ method: 'POST' }).handler(
         )
     },
 )
+
+// ─── POST /admin/users/:id/kyc/resync (Phase 5b) ────────────────────
+
+export interface ResyncKycRequest {
+    userId: string
+    dryRun: boolean
+    reason?: string
+}
+
+interface KycSnapshot {
+    status: string | null
+    verificationStatus: string | null
+    reviewAnswer: string | null
+    reviewRejectType: string | null
+}
+
+export interface ResyncKycResponse {
+    success: boolean
+    data: {
+        userId: string
+        applicantId: string
+        dryRun: boolean
+        sumsubReviewStatus: string
+        requiresReinitiation: boolean
+        before: KycSnapshot
+        after: KycSnapshot
+        changed: boolean
+        summary: string
+        auditEntryId: string | null
+    }
+}
+
+export const resyncKyc = createServerFn({ method: 'POST' }).handler(
+    async (ctx) => {
+        const { userId, dryRun, reason } = (ctx.data ?? {}) as ResyncKycRequest
+        if (!userId) throw new Error('userId is required')
+        return await apiClient.post<ResyncKycResponse>(
+            `/admin/users/${encodeURIComponent(userId)}/kyc/resync`,
+            { dryRun, reason },
+        )
+    },
+)
+
+// ─── POST /admin/users/:id/kyc/allow-resubmit (Phase 5b) ────────────
+
+export interface AllowKycResubmitRequest {
+    userId: string
+    dryRun: boolean
+    reason?: string
+}
+
+interface KycResubmitSnapshot {
+    status: string | null
+    verificationStatus: string | null
+    sumsubApplicantId: string | null
+}
+
+export interface AllowKycResubmitResponse {
+    success: boolean
+    data: {
+        userId: string
+        dryRun: boolean
+        before: KycResubmitSnapshot
+        after: KycResubmitSnapshot
+        changed: boolean
+        summary: string
+        auditEntryId: string | null
+    }
+}
+
+export const allowKycResubmit = createServerFn({ method: 'POST' }).handler(
+    async (ctx) => {
+        const { userId, dryRun, reason } = (ctx.data ?? {}) as AllowKycResubmitRequest
+        if (!userId) throw new Error('userId is required')
+        return await apiClient.post<AllowKycResubmitResponse>(
+            `/admin/users/${encodeURIComponent(userId)}/kyc/allow-resubmit`,
+            { dryRun, reason },
+        )
+    },
+)
