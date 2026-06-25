@@ -120,6 +120,7 @@ interface RemediationContextResponse {
         summary: string
         signalKey: string | null
         divergence?: RemediationContext['divergence'] | null
+        webhookEventId?: string | null
         actions: RemediationContext['actions']
     }
 }
@@ -133,6 +134,81 @@ export const getRemediationContext = createServerFn({ method: 'POST' }).handler(
         return await apiClient.post<RemediationContextResponse>(
             '/admin/remediation-context',
             { targetModel, targetId },
+        )
+    },
+)
+
+// ─── POST /admin/webhook-events/:id/replay (Phase 5a) ───────────────
+
+export interface ReplayWebhookRequest {
+    eventId: string
+    dryRun: boolean
+    reason?: string
+}
+
+export interface ReplayWebhookResponse {
+    success: boolean
+    data: {
+        eventId: string
+        provider: string
+        eventName: string | null
+        dryRun: boolean
+        executed: boolean
+        summary: string | null
+        reason: string | null
+        replayCount: number
+        auditEntryId: string | null
+    }
+}
+
+export const replayWebhookEvent = createServerFn({ method: 'POST' }).handler(
+    async (ctx) => {
+        const { eventId, dryRun, reason } = (ctx.data ?? {}) as ReplayWebhookRequest
+        if (!eventId) throw new Error('eventId is required')
+        return await apiClient.post<ReplayWebhookResponse>(
+            `/admin/webhook-events/${encodeURIComponent(eventId)}/replay`,
+            { dryRun, reason },
+        )
+    },
+)
+
+// ─── POST /admin/transactions/:id/reconcile (Phase 5a) ──────────────
+
+export interface ReconcileTransactionRequest {
+    transactionId: string
+    reason?: string
+}
+
+export interface ReconcileTransactionResponse {
+    success: boolean
+    data: {
+        transactionId: string
+        sessionId: string | null
+        fetchedAt: string
+        divergence: {
+            dbStatus: string
+            providerStatus: string
+            matches: boolean
+            cause: string | null
+        }
+        provider: {
+            sessionStatus: string | null
+            paymentStatus: string | null
+            paymentId: string | null
+            amount: number | null
+            currency: string | null
+        }
+        auditEntryId: string | null
+    }
+}
+
+export const reconcileTransaction = createServerFn({ method: 'POST' }).handler(
+    async (ctx) => {
+        const { transactionId, reason } = (ctx.data ?? {}) as ReconcileTransactionRequest
+        if (!transactionId) throw new Error('transactionId is required')
+        return await apiClient.post<ReconcileTransactionResponse>(
+            `/admin/transactions/${encodeURIComponent(transactionId)}/reconcile`,
+            { reason },
         )
     },
 )

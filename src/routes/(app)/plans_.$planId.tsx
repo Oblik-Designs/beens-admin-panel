@@ -84,11 +84,14 @@ function PlanDetailPage() {
                         <RemediationPanel
                             context={remediationContext}
                             actorRole={actorRole}
-                            onPreview={previewRemediationAction}
+                            onPreview={(action) =>
+                                previewRemediationAction(action, remediationContext)
+                            }
                             onApply={async (action, reason) => {
                                 const res = await applyRemediationAction(
                                     action,
                                     reason,
+                                    remediationContext,
                                 )
                                 return { auditEntryId: res.auditEntryId }
                             }}
