@@ -6,6 +6,8 @@ import {
     getRemediationContext,
     getTransactionTimeline,
     getUserTimeline,
+    reconcileTransaction,
+    replayWebhookEvent,
     searchWebhookEvents,
     type WebhookEventsSearchParams,
 } from '@/server/api/crisis'
@@ -159,6 +161,7 @@ export const remediationContextOptions = (
                     targetId: res.data.targetId,
                     summary: res.data.summary,
                     divergence: res.data.divergence ?? undefined,
+                    webhookEventId: res.data.webhookEventId ?? null,
                     actions: res.data.actions as Array<RemediationAction>,
                 },
             }
@@ -166,29 +169,118 @@ export const remediationContextOptions = (
         enabled: !!targetModel && !!targetId,
     })
 
-// ─── Mutation hooks — preview & apply (placeholder) ─────────────────
-// Phase 5 endpoints — still mock.
+// ─── Mutation hooks — preview & apply ───────────────────────────────
+// Phase 5a wires `replay_webhook` (POST /admin/webhook-events/:id/replay)
+// and `reconcile_transaction` (POST /admin/transactions/:id/reconcile)
+// to real endpoints. Remaining action keys still fall through to the
+// placeholder until Phase 5b–5f land — the panel disables Apply on those
+// rows via the role gate, so operators see "Recommended" but can't
+// proceed yet.
+
+const PLACEHOLDER_PREVIEW =
+    '→ (placeholder preview — endpoint ships in a later Phase 5 PR)'
 
 export async function previewRemediationAction(
     action: RemediationAction,
+    context: RemediationContext,
 ): Promise<string> {
+    if (action.key === 'replay_webhook') {
+        const eventId = context.webhookEventId
+        if (!eventId) {
+            return 'Cannot replay: no stored webhook event linked to this entity.'
+        }
+        const res = await replayWebhookEvent({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { eventId, dryRun: true },
+        })
+        const { provider, eventName, summary, executed, replayCount, reason } = res.data
+        if (!summary) {
+            return [
+                `Webhook ${eventId} cannot be replayed (${reason ?? 'no replay plan'}).`,
+                `provider=${provider}, event=${eventName ?? '-'}, prior replays=${replayCount}`,
+            ].join('\n')
+        }
+        return [
+            `Replay plan: ${summary}`,
+            `provider=${provider}, event=${eventName ?? '-'}, prior replays=${replayCount}`,
+            executed
+                ? '(unexpected — dry-run returned executed=true)'
+                : 'Dry run — no side effects applied yet. Click Apply with a reason to run.',
+        ].join('\n')
+    }
+    if (action.key === 'reconcile_transaction') {
+        const transactionId =
+            context.targetModel === 'Transaction' ? context.targetId : null
+        if (!transactionId) {
+            return 'Cannot reconcile: this action targets a transaction.'
+        }
+        // Reconcile is read-only — the "preview" *is* the live re-pull
+        // from Xendit. We still call it on Preview so the operator sees
+        // the divergence before clicking Apply (which records the audit
+        // row but does not mutate anything).
+        const res = await reconcileTransaction({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { transactionId },
+        })
+        const { divergence, provider } = res.data
+        return [
+            `DB status:       ${divergence.dbStatus}`,
+            `Provider status: ${divergence.providerStatus}`,
+            divergence.matches
+                ? 'States agree — no operator action needed.'
+                : `Divergence cause: ${divergence.cause ?? '(unclassified)'}`,
+            provider.amount !== null
+                ? `Xendit amount: ${provider.amount} ${provider.currency ?? ''}`.trim()
+                : '',
+        ]
+            .filter(Boolean)
+            .join('\n')
+    }
     await delay(200)
-    return [
-        `Would call: ${action.key}`,
-        action.key === 'replay_webhook'
-            ? '→ Re-runs the stored webhook through Payments.completePlanPayment.'
-            : action.key === 'reconcile_transaction'
-                ? '→ Re-pulls Xendit /sessions/:id and compares with DB.'
-                : action.key === 'force_transaction_status'
-                    ? '→ Forces txn status. Last-resort manual override.'
-                    : '→ (placeholder preview — wire to real endpoint in Phase 5)',
-    ].join('\n')
+    return `Would call: ${action.key}\n${PLACEHOLDER_PREVIEW}`
 }
 
 export async function applyRemediationAction(
     action: RemediationAction,
-    _reason: string,
+    reason: string,
+    context: RemediationContext,
 ): Promise<RemediationApplyResponse> {
+    if (action.key === 'replay_webhook') {
+        const eventId = context.webhookEventId
+        if (!eventId) {
+            throw new Error('Cannot replay: no stored webhook event linked to this entity.')
+        }
+        const res = await replayWebhookEvent({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { eventId, dryRun: false, reason },
+        })
+        return {
+            success: res.success,
+            result: 'APPLIED',
+            auditEntryId: res.data.auditEntryId ?? '',
+            diffSummary: res.data.summary ?? `Replayed ${eventId}.`,
+        }
+    }
+    if (action.key === 'reconcile_transaction') {
+        const transactionId =
+            context.targetModel === 'Transaction' ? context.targetId : null
+        if (!transactionId) {
+            throw new Error('Cannot reconcile: this action targets a transaction.')
+        }
+        const res = await reconcileTransaction({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { transactionId, reason },
+        })
+        const { divergence } = res.data
+        return {
+            success: res.success,
+            result: 'APPLIED',
+            auditEntryId: res.data.auditEntryId ?? '',
+            diffSummary: divergence.matches
+                ? `Re-pulled Xendit — DB and provider agree (${divergence.dbStatus}).`
+                : `Re-pulled Xendit — divergence: DB=${divergence.dbStatus} vs provider=${divergence.providerStatus}.`,
+        }
+    }
     await delay(400)
     return {
         success: true,

@@ -200,6 +200,10 @@ export interface RemediationContext {
         providerValue: string
         cause: string | null
     }
+    /** Stored webhook event the signal was derived from. Populated when
+     *  the action is `replay_webhook` so the panel can target
+     *  `/admin/webhook-events/:id/replay` without a second lookup. */
+    webhookEventId?: string | null
     actions: Array<RemediationAction>
 }
 
