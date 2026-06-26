@@ -286,6 +286,8 @@ export interface IssuePlanCodeParams {
   participantId?: string
   code?: string
   regenerate?: boolean
+  dryRun?: boolean
+  reason?: string
 }
 
 export const issuePlanCode = createServerFn({ method: 'POST' }).handler(
@@ -297,6 +299,8 @@ export const issuePlanCode = createServerFn({ method: 'POST' }).handler(
       participantId: p.participantId,
       code: p.code,
       regenerate: p.regenerate,
+      dryRun: p.dryRun,
+      reason: p.reason,
     })
   },
 )
@@ -305,6 +309,8 @@ export interface ResendPlanCodeParams {
   planId: string
   type: PlanCodeType
   participantId: string
+  dryRun?: boolean
+  reason?: string
 }
 
 export const resendPlanCode = createServerFn({ method: 'POST' }).handler(
@@ -314,6 +320,8 @@ export const resendPlanCode = createServerFn({ method: 'POST' }).handler(
     return await apiClient.post<PlanCodeMutationResponse>(`/admin/plans/${p.planId}/codes/resend`, {
       type: p.type,
       participantId: p.participantId,
+      dryRun: p.dryRun,
+      reason: p.reason,
     })
   },
 )
@@ -337,6 +345,8 @@ export interface MarkParticipantParams {
   planId: string
   participantId: string
   stage: 'present' | 'completed'
+  dryRun?: boolean
+  reason?: string
 }
 
 export const markParticipant = createServerFn({ method: 'POST' }).handler(
@@ -346,7 +356,61 @@ export const markParticipant = createServerFn({ method: 'POST' }).handler(
       throw new Error('Plan ID and participant ID are required')
     }
     return await apiClient.post<PlanCodeMutationResponse>(`/admin/plans/${p.planId}/participants/${p.participantId}/mark`,
-      { stage: p.stage },
+      { stage: p.stage, dryRun: p.dryRun, reason: p.reason },
+    )
+  },
+)
+
+export interface ResetCodeAttemptsParams {
+  planId: string
+  participantId: string
+  start?: boolean
+  end?: boolean
+  clearCode?: boolean
+  dryRun?: boolean
+  reason?: string
+}
+
+export const resetCodeAttempts = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const p = ctx.data as ResetCodeAttemptsParams | undefined
+    if (!p?.planId || !p.participantId) {
+      throw new Error('Plan ID and participant ID are required')
+    }
+    return await apiClient.post<PlanCodeMutationResponse>(
+      `/admin/plans/${p.planId}/participants/${p.participantId}/reset-code-attempts`,
+      {
+        start: p.start,
+        end: p.end,
+        clearCode: p.clearCode,
+        dryRun: p.dryRun,
+        reason: p.reason,
+      },
+    )
+  },
+)
+
+export interface ForceJoinParams {
+  planId: string
+  participantId: string
+  transactionId?: string
+  dryRun?: boolean
+  reason?: string
+}
+
+export const forceJoin = createServerFn({ method: 'POST' }).handler(
+  async (ctx) => {
+    const p = ctx.data as ForceJoinParams | undefined
+    if (!p?.planId || !p.participantId) {
+      throw new Error('Plan ID and participant ID are required')
+    }
+    return await apiClient.post<PlanCodeMutationResponse>(
+      `/admin/plans/${p.planId}/participants/${p.participantId}/force-join`,
+      {
+        transactionId: p.transactionId,
+        dryRun: p.dryRun,
+        reason: p.reason,
+      },
     )
   },
 )

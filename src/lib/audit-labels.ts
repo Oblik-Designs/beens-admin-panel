@@ -50,6 +50,10 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
     "user.resend_otp": "Resend OTP",
     "user.verify_contact": "Mark contact verified",
     "user.unstick_incomplete": "Unstick INCOMPLETE signup",
+
+    // ── Phase 5d — plan participant fixes ────────────────────────────
+    "plan.reset_code_attempts": "Reset code attempts",
+    "plan.force_join": "Force-enrol paid user",
 };
 
 /** Render-time label for an audit action. Falls back to the raw key

@@ -1,21 +1,25 @@
 import { queryOptions } from '@tanstack/react-query'
 import type {
+  ForceJoinParams,
   IssuePlanCodeParams,
   MarkParticipantParams,
   PlanCodesResponse,
   PlanSearchParams,
   ResendPlanCodeParams,
+  ResetCodeAttemptsParams,
   SetPlanScheduleParams,
   SetPlanStatusParams,
   SuspendAndRefundPlanResponse,
 } from '@/server/api/plans'
 import {
+  forceJoin,
   getPlanById,
   getPlanCategories,
   getPlanCodes,
   issuePlanCode,
   markParticipant,
   resendPlanCode,
+  resetCodeAttempts,
   searchPlans,
   setPlanSchedule,
   setPlanStatus,
@@ -103,5 +107,21 @@ export const setPlanScheduleOptions = {
   mutationFn: async (params: SetPlanScheduleParams) => {
     // @ts-expect-error - createServerFn types don't properly reflect POST data parameter
     return await setPlanSchedule({ data: params })
+  },
+}
+
+export const resetCodeAttemptsOptions = {
+  mutationKey: ['plan', 'reset-code-attempts'],
+  mutationFn: async (params: ResetCodeAttemptsParams) => {
+    // @ts-expect-error - createServerFn types don't properly reflect POST data parameter
+    return await resetCodeAttempts({ data: params })
+  },
+}
+
+export const forceJoinOptions = {
+  mutationKey: ['plan', 'force-join'],
+  mutationFn: async (params: ForceJoinParams) => {
+    // @ts-expect-error - createServerFn types don't properly reflect POST data parameter
+    return await forceJoin({ data: params })
   },
 }
