@@ -29,12 +29,14 @@ export interface Ticket {
     size: number
   }>
   // ─── Phase 1 (Crisis Console) — landing fields ────────────────
-  // The API does not yet populate these. Tickets created before the
-  // Phase 1 migration default to `origin: "USER"` semantically; the
-  // field is optional here until the API contract ships.
   origin?: 'USER' | 'AUTO'
   autoRule?: string | null
   dedupKey?: string | null
+  // ─── Phase 6 — structured metadata from detect-crises ────────
+  // Keyed by rule: e.g. { planId, planTitle, userId, payerName }
+  // for payment rules; { applicantId, pendingSince } for KYC; etc.
+  // Free-form so new rules don't need a panel type update.
+  meta?: Record<string, string | null>
 }
 
 export interface TicketReportedTargetUser {

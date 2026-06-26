@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   Area,
@@ -82,7 +82,6 @@ function App() {
     React.useState<RangeValue>('3m')
 
   const { data: statsResponse } = useQuery(getAdminStatsOptions)
-  console.log('statsResponse is: ', statsResponse)
   const stats = statsResponse?.data
 
   const totalUsers = sumCounts(stats?.users)
@@ -92,6 +91,13 @@ function App() {
   const frozenEscrowEntries = Object.entries(
     stats?.disputes?.frozenEscrow ?? {},
   )
+
+  // Phase 6 — crisis console attention counters.
+  const attentionTotal = stats?.attention?.total ?? 0
+  const attentionByRule = stats?.attention?.byRule ?? {}
+  const topRules = Object.entries(attentionByRule)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
 
   const revenueByCurrency = stats?.totalRevenue ?? {}
   const primaryCurrency =
@@ -129,7 +135,6 @@ function App() {
         <SiteHeader title="Dashboard" />
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2 p-4">
-            {/* Top 4 cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card size="sm">
                 <CardHeader>
@@ -213,6 +218,49 @@ function App() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Phase 6 — Crisis Alerts attention tile */}
+            <Link
+              to="/tickets"
+              search={{ origin: 'AUTO', status: 'OPEN', page: 1, limit: 10, sortBy: 'priority', sortOrder: 'desc' } as any}
+              className="block"
+            >
+              <Card
+                size="sm"
+                className={`mt-0 cursor-pointer transition-colors hover:bg-muted/50 ${
+                  attentionTotal > 0 ? 'border-orange-300 dark:border-orange-700' : ''
+                }`}
+              >
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <span
+                      className={`inline-block size-2 rounded-full ${
+                        attentionTotal > 0
+                          ? 'bg-orange-500 animate-pulse'
+                          : 'bg-green-500'
+                      }`}
+                    />
+                    Crisis Alerts
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                  <p className="text-2xl font-semibold tracking-tight">
+                    {attentionTotal > 0 ? formatNumber(attentionTotal) : '—'}
+                  </p>
+                  <CardDescription>
+                    {attentionTotal === 0
+                      ? 'All clear — no auto-detected issues.'
+                      : topRules.length > 0
+                        ? topRules
+                            .map(([rule, count]) => `${count}× ${rule.replace(/_/g, ' ')}`)
+                            .join(' · ')
+                        : `${attentionTotal} open auto-detected ticket${
+                            attentionTotal !== 1 ? 's' : ''
+                          }`}
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </Link>
 
             <div className="mt-6 space-y-6">
               {/* Plans Created per day */}
