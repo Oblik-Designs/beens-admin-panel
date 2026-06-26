@@ -17,6 +17,7 @@ import {
     remediationContextOptions,
 } from '@/queries/crisis'
 import { getPlanByIdOptions } from '@/queries/plans'
+import { useActorRole } from '@/lib/use-actor-role'
 
 /**
  * Plan 360 — Phase 3 / L1 of the Crisis Console.
@@ -54,7 +55,7 @@ function PlanDetailPage() {
     const remediationContext = remediationRes?.data
     const planReady = !planLoading && !!plan._id
 
-    const actorRole = 'MANAGER' as const
+    const actorRole = useActorRole()
 
     return (
         <Entity360Shell

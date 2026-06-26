@@ -13,6 +13,11 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { canApply } from '@/lib/crisis-copy'
 import { cn } from '@/lib/utils'
 import { DivergenceCard } from '@/components/admin/divergence-card'
@@ -38,6 +43,35 @@ import type {
  * has zero runtime dependency on the API. Wires up cleanly once Phase 5
  * endpoints ship.
  */
+/**
+ * Extra per-action inputs the generic preview/apply flow can't express with
+ * just a reason. `force_transaction_status` (Phase 5e) carries the operator's
+ * chosen target status here. Structurally matches the same-named type in
+ * `queries/crisis.ts` — kept local so this presentational component keeps its
+ * zero-runtime-dependency-on-the-API contract.
+ */
+export interface RemediationActionParams {
+    targetStatus?: string
+}
+
+/** Action key that requires the operator to pick a target status first. */
+const TXN_FORCE_STATUS_KEY = 'force_transaction_status'
+
+/**
+ * Statuses the operator may force a transaction into (Phase 5e). Mirrors
+ * `transactionOptions.STATUS` in beens-api; the backend re-validates. COMPLETED
+ * settles the platform fee, FAILED reverses splits — both surfaced in the
+ * preview before apply.
+ */
+const FORCE_STATUS_OPTIONS = [
+    'COMPLETED',
+    'FAILED',
+    'ESCALATED',
+    'PROCESSING',
+    'PENDING',
+    'ESCROW',
+] as const
+
 export interface RemediationPanelProps {
     context: RemediationContext
     /** Current admin user's role — drives apply-button gating. */
@@ -46,13 +80,17 @@ export interface RemediationPanelProps {
      * Preview hook. Should return a plain-language diff string (e.g.
      * "Will mark txn 6a3a... → COMPLETED + create REFUND credit 58.5 THB").
      */
-    onPreview: (action: RemediationAction) => Promise<string>
+    onPreview: (
+        action: RemediationAction,
+        params?: RemediationActionParams,
+    ) => Promise<string>
     /**
      * Apply hook. Reason is mandatory. Should return the audit entry id.
      */
     onApply: (
         action: RemediationAction,
         reason: string,
+        params?: RemediationActionParams,
     ) => Promise<{ auditEntryId: string }>
     /**
      * Optional render slot at the bottom of the Actions section. The
@@ -79,6 +117,9 @@ export function RemediationPanel({
     const [previewLoading, setPreviewLoading] = React.useState(false)
     const [applyLoading, setApplyLoading] = React.useState(false)
     const [reason, setReason] = React.useState('')
+    // Phase 5e — operator-chosen target status for force_transaction_status.
+    // Unused by every other action.
+    const [targetStatus, setTargetStatus] = React.useState('')
     const [error, setError] = React.useState<string | null>(null)
     const [success, setSuccess] = React.useState<{
         action: RemediationAction
@@ -86,21 +127,44 @@ export function RemediationPanel({
     } | null>(null)
 
     const recommended = context.actions.find((a) => a.recommended)
+    const needsTargetStatus = activeAction?.key === TXN_FORCE_STATUS_KEY
 
-    const handleOpen = async (action: RemediationAction) => {
-        setActiveAction(action)
+    const runPreview = async (
+        action: RemediationAction,
+        params?: RemediationActionParams,
+    ) => {
         setPreviewText(null)
-        setReason('')
         setError(null)
-        setSuccess(null)
         setPreviewLoading(true)
         try {
-            const diff = await onPreview(action)
+            const diff = await onPreview(action, params)
             setPreviewText(diff)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Preview failed')
         } finally {
             setPreviewLoading(false)
+        }
+    }
+
+    const handleOpen = async (action: RemediationAction) => {
+        setActiveAction(action)
+        setPreviewText(null)
+        setReason('')
+        setTargetStatus('')
+        setError(null)
+        setSuccess(null)
+        // force_transaction_status has nothing to preview until the operator
+        // picks a target status — defer the preview to the select's onChange.
+        if (action.key === TXN_FORCE_STATUS_KEY) return
+        await runPreview(action)
+    }
+
+    const handleTargetStatusChange = async (next: string) => {
+        setTargetStatus(next)
+        if (activeAction && next) {
+            await runPreview(activeAction, { targetStatus: next })
+        } else {
+            setPreviewText(null)
         }
     }
 
@@ -110,10 +174,17 @@ export function RemediationPanel({
             setError('A reason is required to apply this action.')
             return
         }
+        if (needsTargetStatus && !targetStatus) {
+            setError('Choose a target status before applying.')
+            return
+        }
+        const params: RemediationActionParams | undefined = needsTargetStatus
+            ? { targetStatus }
+            : undefined
         setError(null)
         setApplyLoading(true)
         try {
-            const result = await onApply(activeAction, reason.trim())
+            const result = await onApply(activeAction, reason.trim(), params)
             setSuccess({ action: activeAction, auditEntryId: result.auditEntryId })
             // Refetch anything that might show the new audit row (timelines
             // pull from /admin/.../timeline which merges adminaudits; the
@@ -235,6 +306,36 @@ export function RemediationPanel({
                             </div>
                         ) : (
                             <>
+                                {needsTargetStatus && (
+                                    <div className="space-y-1">
+                                        <Label
+                                            htmlFor="force-target-status"
+                                            className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+                                        >
+                                            Target status (required)
+                                        </Label>
+                                        <select
+                                            id="force-target-status"
+                                            value={targetStatus}
+                                            onChange={(e) =>
+                                                handleTargetStatusChange(e.target.value)
+                                            }
+                                            className="h-9 w-full rounded-md border bg-background px-2 text-xs"
+                                        >
+                                            <option value="">Select a status…</option>
+                                            {FORCE_STATUS_OPTIONS.map((s) => (
+                                                <option key={s} value={s}>
+                                                    {s}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="text-[11px] text-muted-foreground">
+                                            COMPLETED settles the platform fee; FAILED reverses
+                                            all splits. Other statuses change state only.
+                                        </p>
+                                    </div>
+                                )}
+
                                 <div className="space-y-1">
                                     <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                                         Preview
@@ -300,6 +401,7 @@ export function RemediationPanel({
                                         applyLoading ||
                                         !reason.trim() ||
                                         !activeAction ||
+                                        (needsTargetStatus && !targetStatus) ||
                                         !canApply(actorRole, activeAction.minRole)
                                     }
                                 >
@@ -340,6 +442,33 @@ interface ActionRowProps {
 }
 
 function ActionRow({ action, canApply: actorCanApply, onOpen }: ActionRowProps) {
+    const button = (
+        <Button
+            size="sm"
+            variant={action.recommended ? 'default' : 'outline'}
+            disabled={!actorCanApply}
+            onPointerDown={(e) => {
+                // Stop the open-click from bubbling into the overlay that's
+                // about to mount — otherwise the same pointer event is
+                // interpreted as "click outside the dialog" and dismisses it
+                // immediately.
+                e.stopPropagation()
+            }}
+            onClick={(e) => {
+                e.stopPropagation()
+                onOpen()
+            }}
+            className="h-8 shrink-0 gap-1"
+        >
+            {action.recommended ? (
+                <PlayIcon className="size-3" />
+            ) : (
+                <EyeIcon className="size-3" />
+            )}
+            Preview
+        </Button>
+    )
+
     return (
         <div className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
             <div className="min-w-0 flex-1 space-y-0.5">
@@ -355,35 +484,19 @@ function ActionRow({ action, canApply: actorCanApply, onOpen }: ActionRowProps) 
                     Min role: {action.minRole.toLowerCase()}
                 </p>
             </div>
-            <Button
-                size="sm"
-                variant={action.recommended ? 'default' : 'outline'}
-                disabled={!actorCanApply}
-                onPointerDown={(e) => {
-                    // Stop the open-click from bubbling into the Radix
-                    // overlay that's about to mount — otherwise the same
-                    // pointer event is interpreted as "click outside the
-                    // dialog" and dismisses it immediately.
-                    e.stopPropagation()
-                }}
-                onClick={(e) => {
-                    e.stopPropagation()
-                    onOpen()
-                }}
-                title={
-                    actorCanApply
-                        ? undefined
-                        : `Requires ${action.minRole.toLowerCase()} or higher.`
-                }
-                className="h-8 shrink-0 gap-1"
-            >
-                {action.recommended ? (
-                    <PlayIcon className="size-3" />
-                ) : (
-                    <EyeIcon className="size-3" />
-                )}
-                Preview
-            </Button>
+            {/* Phase 8 — below-min-role operators see the button disabled with
+                a tooltip explaining the requirement. base-ui keeps a disabled
+                trigger hoverable, so the tooltip still fires. */}
+            {actorCanApply ? (
+                button
+            ) : (
+                <Tooltip>
+                    <TooltipTrigger render={button} />
+                    <TooltipContent side="left">
+                        Requires {action.minRole.toLowerCase()} or higher.
+                    </TooltipContent>
+                </Tooltip>
+            )}
         </div>
     )
 }
