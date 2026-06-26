@@ -1,0 +1,153 @@
+# ──────────────────────────────────────────────────────────────
+# Deploy to UAT (EC2 — TanStack Start / Nitro)
+# ──────────────────────────────────────────────────────────────
+# Triggers when a commit lands on `uat`.
+#
+# Flow:
+#   1. Re-runs the full Pre-Flight Check (type-check + build gate)
+#   2. Builds the Nitro bundle on the GitHub Actions runner
+#      (runner has 7 GB RAM; EC2 t3.small OOMs during nitro build)
+#   3. SCPs .env.production + .output/ to the EC2
+#   4. Restarts the beens-admin systemd service
+#   5. Verifies the admin panel returns HTTP 200 or 302
+#
+# ── GitHub Secrets setup ──────────────────────────────────────
+#
+# Environment secrets (Settings → Environments → uat → Add secret):
+#
+#   EC2 access:
+#   EC2_HOST                    47.131.222.40  (EC2 IP — keep as IP for port 4443 access)
+#   EC2_USER                    ubuntu
+#   EC2_SSH_PRIVATE_KEY         PEM content of beens-test-keypair.pem
+#
+#   App config (baked into the Nitro bundle at build time):
+#   VITE_API_BASE_URL           https://api.uat.beens.app
+#   VITE_SESSION_SECRET         32+ character random hex string
+#                               (generate: openssl rand -hex 32)
+# ──────────────────────────────────────────────────────────────
+
+name: Deploy to UAT
+
+on:
+  push:
+    branches: [uat]
+
+concurrency:
+  group: deploy-uat
+  cancel-in-progress: true
+
+jobs:
+  # ── Re-run preflight before every deploy ──────────────────
+  preflight:
+    name: Pre-Flight Check
+    uses: ./.github/workflows/preflight.yml
+
+  # ── Deploy ────────────────────────────────────────────────
+  deploy:
+    name: Deploy to UAT (EC2)
+    runs-on: ubuntu-latest
+    needs: preflight
+    timeout-minutes: 20
+    environment: uat
+
+    steps:
+      # ── Checkout ────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Setup Bun ───────────────────────────────────────
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # ── Install ─────────────────────────────────────────
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # ── Write .env.production ───────────────────────────
+      # Written from environment secrets — never committed to git.
+      # Passed via env vars to avoid shell re-expansion of special
+      # characters inside secret values.
+      - name: Write .env.production
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_SESSION_SECRET: ${{ secrets.VITE_SESSION_SECRET }}
+        run: |
+          cat > .env.production << EOF
+          VITE_API_BASE_URL=${VITE_API_BASE_URL}
+          VITE_SESSION_SECRET=${VITE_SESSION_SECRET}
+          EOF
+
+      # ── Swap in UAT branding ────────────────────────────
+      # Production assets live in public/ under their default
+      # names; UAT variants ship alongside as *-uat.*. Overwrite
+      # the defaults so the Nitro bundle picks up the UAT marks.
+      - name: Swap in UAT branding
+        run: |
+          cp public/beenslogo-uat.png public/beenslogo_1.png
+          cp public/favicon-uat.ico   public/favicon.ico
+          cp public/logo192-uat.png   public/logo192.png
+          cp public/logo512-uat.png   public/logo512.png
+
+      # ── Build on runner ─────────────────────────────────
+      # Nitro OOMs on the EC2 t3.small (~2 GB RAM).
+      # The GitHub Actions runner has 7 GB — build here, ship
+      # the compiled .output/ artifact to EC2 instead.
+      - name: Build (Nitro)
+        run: bun run build
+
+      # ── Set up SSH key ───────────────────────────────────
+      - name: Configure SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${SSH_PRIVATE_KEY}" > ~/.ssh/deploy_key.pem
+          chmod 600 ~/.ssh/deploy_key.pem
+
+      # ── Ship artifacts to EC2 ────────────────────────────
+      - name: SCP .env.production to EC2
+        run: |
+          scp -i ~/.ssh/deploy_key.pem \
+            -o StrictHostKeyChecking=no \
+            .env.production \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/beens-admin-panel/.env.production
+
+      - name: Rsync .output/ to EC2
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key.pem -o StrictHostKeyChecking=no" \
+            .output/ \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/beens-admin-panel/.output/
+
+      # ── Restart service ──────────────────────────────────
+      - name: Restart beens-admin
+        run: |
+          ssh -i ~/.ssh/deploy_key.pem \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+            "sudo systemctl restart beens-admin && sleep 5 && sudo systemctl is-active beens-admin || (sudo journalctl -u beens-admin -n 30 --no-pager && exit 1)"
+
+      # ── Verify deployment ────────────────────────────────
+      # Admin panel runs on port 4443 with a self-signed cert.
+      # -k skips cert verification; -L follows the /login redirect.
+      - name: Verify deployment
+        run: |
+          URL="https://${{ secrets.EC2_HOST }}:4443"
+          for i in $(seq 1 10); do
+            STATUS=$(curl -skL -o /dev/null -w "%{http_code}" "${URL}")
+            if [ "${STATUS}" = "200" ] || [ "${STATUS}" = "302" ]; then
+              echo ""
+              echo "✅ UAT deployment successful!"
+              echo "──────────────────────────────────"
+              echo "  ${URL}"
+              echo "──────────────────────────────────"
+              exit 0
+            fi
+            echo "⏳ Got ${STATUS}, waiting... (${i}/10)"
+            sleep 5
+          done
+          echo ""
+          echo "❌ Health check failed — admin panel returned unexpected status"
+          exit 1

@@ -1,12 +1,14 @@
 'use client'
 
 import * as React from 'react'
+import { Link } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import {
   BanIcon,
   CalendarIcon,
   CircleXIcon,
+  ExternalLinkIcon,
   ReceiptCentIcon,
   UserIcon,
 } from 'lucide-react'
@@ -45,13 +47,11 @@ function getReporterName(reporter: Ticket['reporter']) {
 
 function formatDateTime(value?: string) {
   if (!value) return '-'
-  console.log('value: ', value)
 
   let date: Date
 
   try {
     date = parseISO(value)
-    console.log('date: ', date)
     if (Number.isNaN(date.getTime())) {
       throw new Error('Invalid ISO date')
     }
@@ -62,6 +62,50 @@ function formatDateTime(value?: string) {
   }
 
   return format(date, 'MMM dd yyyy, hh:mm a')
+}
+
+/**
+ * Renders clickable jump-links for the payer and plan extracted from
+ * `ticket.meta` for AUTO-origin (Phase 6) tickets. Falls back gracefully
+ * if the meta fields are absent.
+ */
+function AutoTicketContext({ ticket }: { ticket: Ticket }) {
+  const meta = (ticket as any).meta as Record<string, string | null> | undefined
+  if (!meta) return null
+
+  const userId = meta.userId ?? null
+  const planId = meta.planId ?? null
+  const payerName = meta.payerName ?? userId
+  const planTitle = meta.planTitle ?? planId
+
+  if (!userId && !planId) return null
+
+  return (
+    <div className="mb-3 flex flex-wrap gap-2">
+      {userId && (
+        <Link
+          to="/users/$userId"
+          params={{ userId }}
+          className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted hover:text-primary"
+        >
+          <UserIcon className="size-3 shrink-0 text-muted-foreground" />
+          {payerName}
+          <ExternalLinkIcon className="size-3 shrink-0 text-muted-foreground" />
+        </Link>
+      )}
+      {planId && (
+        <Link
+          to="/plans/$planId"
+          params={{ planId }}
+          className="inline-flex items-center gap-1.5 rounded-md border border-border/60 bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted hover:text-primary"
+        >
+          <CalendarIcon className="size-3 shrink-0 text-muted-foreground" />
+          {planTitle}
+          <ExternalLinkIcon className="size-3 shrink-0 text-muted-foreground" />
+        </Link>
+      )}
+    </div>
+  )
 }
 
 type TicketActionSheetProps = {
@@ -98,11 +142,15 @@ export function TicketActionSheet({
   const [closeMessage, setCloseMessage] = React.useState('')
   const closeMutation = useMutation({
     ...closeTicketOptions,
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Close ticket mutation succeeded:', data)
       queryClient.invalidateQueries({ queryKey: ['tickets'] })
       onOpenChange(false)
       setCloseMessage('')
       onActionSuccess?.('Ticket closed successfully.')
+    },
+    onError: (error) => {
+      console.error('Close ticket mutation failed:', error)
     },
   })
 
@@ -260,6 +308,10 @@ export function TicketActionSheet({
               <CardContent>
                 {ticket.title && (
                   <h4 className="text-base font-medium mb-2">{ticket.title}</h4>
+                )}
+                {/* Phase 6 AUTO tickets — render payer + plan as jump links */}
+                {ticket.origin === 'AUTO' && (
+                  <AutoTicketContext ticket={ticket} />
                 )}
                 {ticket.description && (
                   <p className="text-muted-foreground text-sm">

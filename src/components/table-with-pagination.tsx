@@ -40,6 +40,14 @@ export type TableWithPaginationProps<TData> = {
   emptyAction?: React.ReactNode
   loadingMessage?: string
   isLoading?: boolean
+  /**
+   * When provided, clicking a row's non-interactive cells fires this
+   * callback with the row data. Clicks originating from a button, link,
+   * input, or any element with `[data-row-click-ignore]` are skipped so
+   * existing cell-level actions (open-sheet buttons, dropdowns) are not
+   * hijacked.
+   */
+  onRowClick?: (row: TData) => void
 }
 
 export function TableWithPagination<TData>({
@@ -56,6 +64,7 @@ export function TableWithPagination<TData>({
   emptyAction,
   loadingMessage = 'Loading...',
   isLoading = false,
+  onRowClick,
 }: TableWithPaginationProps<TData>) {
   const safePageCount = Math.max(0, pageCount)
 
@@ -135,7 +144,28 @@ export function TableWithPagination<TData>({
           <TableBody className="**:data-[slot=table-cell]:first:w-8">
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="group">
+                <TableRow
+                  key={row.id}
+                  className={`group ${onRowClick ? 'cursor-pointer' : ''}`}
+                  onClick={
+                    onRowClick
+                      ? (event) => {
+                          // Skip when the click came from an interactive
+                          // element so existing cell buttons / dropdowns /
+                          // links keep their original behavior.
+                          const target = event.target as HTMLElement | null
+                          if (
+                            target?.closest(
+                              'button, a, input, select, textarea, [role="menuitem"], [data-row-click-ignore]',
+                            )
+                          ) {
+                            return
+                          }
+                          onRowClick(row.original)
+                        }
+                      : undefined
+                  }
+                >
                   {row.getVisibleCells().map((cell) => {
                     const colMeta = cell.column.columnDef.meta as
                       | { className?: string; sticky?: 'right' }

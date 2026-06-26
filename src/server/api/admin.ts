@@ -26,6 +26,14 @@ export interface AdminStatsData {
   moderation: { suspendedPlans: number }
   totalRevenue: Record<string, number>
   workload: Array<AdminWorkloadEntry>
+  // Phase 6 — crisis console attention counters.
+  // `total` = open AUTO-origin ticket count; `byRule` breaks it down
+  // by autoRule slug (e.g. `payment_stuck_processing`) so the
+  // dashboard can render "5 stuck payments · 2 KYC unsynced …".
+  attention?: {
+    total: number
+    byRule: Record<string, number>
+  }
 }
 
 export interface AdminStatsResponse {

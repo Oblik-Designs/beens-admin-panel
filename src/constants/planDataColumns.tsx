@@ -2,24 +2,17 @@ import {
   AlertTriangleIcon,
   CalendarIcon,
   MapPinIcon,
-  UserIcon,
   UsersIcon,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { Link } from '@tanstack/react-router'
-import type * as React from 'react'
 
 import type { ColumnDef } from '@tanstack/react-table'
 import type { Plan, PlanSortField } from '@/server/api/plans'
 import { SortableColumnHeader } from '@/components/admin/sortable-column-header'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 
 type PlanTableMeta = {
-  onCreatorClick?: (userId: string) => void
-  onViewPlan?: (planId: string) => void
-  onSuspendPlan?: (plan: Plan) => void
   sortBy?: PlanSortField
   sortOrder?: 'asc' | 'desc'
   onSortChange?: (sortBy: PlanSortField, sortOrder: 'asc' | 'desc') => void
@@ -72,67 +65,16 @@ function sortableHeader(label: string, sortField: PlanSortField) {
 
 export const planColumns: Array<ColumnDef<Plan>> = [
   {
-    id: 'creator',
-    header: 'Creator',
-    cell: ({ row, table }) => {
-      const creator = row.original.creator
-      const name =
-        creator?.displayName ||
-        `${creator?.firstName ?? ''} ${creator?.lastName ?? ''}`.trim() ||
-        'Unknown'
-      const onCreatorClick = (table.options.meta as PlanTableMeta)?.onCreatorClick
-      const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation()
-        if (creator && onCreatorClick) {
-          onCreatorClick(creator._id)
-        }
-      }
-
-      return (
-        <button
-          type="button"
-          onClick={handleClick}
-          disabled={!onCreatorClick || !creator}
-          className="flex items-center gap-2 px-4 py-1 text-left hover:bg-muted/50 rounded-md transition-colors disabled:pointer-events-none disabled:opacity-100 cursor-pointer"
-        >
-          <Avatar className="size-7">
-            <AvatarImage src={creator?.profileImage} alt={name} />
-            <AvatarFallback className="text-muted-foreground bg-transparent border">
-              <UserIcon className="size-3.25" />
-            </AvatarFallback>
-          </Avatar>
-          <span
-            className={
-              onCreatorClick && creator ? 'underline underline-offset-2' : ''
-            }
-          >
-            {name}
-          </span>
-        </button>
-      )
-    },
-  },
-  {
     accessorKey: 'title',
     header: sortableHeader('Title', 'title'),
     meta: { className: 'max-w-[220px] px-4' },
-    cell: ({ row, table }) => {
+    cell: ({ row }) => {
       const plan = row.original
-      const onViewPlan = (table.options.meta as PlanTableMeta)?.onViewPlan
       const reportCount = plan.reportCount ?? 0
 
       return (
         <div className="flex max-w-[220px] flex-col gap-1">
-          <button
-            type="button"
-            className="truncate text-left text-sm hover:underline"
-            onClick={(event) => {
-              event.stopPropagation()
-              onViewPlan?.(plan._id)
-            }}
-          >
-            {plan.title}
-          </button>
+          <span className="truncate text-sm">{plan.title}</span>
           {reportCount > 0 && (
             <Link
               to="/tickets"
@@ -160,9 +102,8 @@ export const planColumns: Array<ColumnDef<Plan>> = [
   {
     id: 'kind',
     header: 'Kind',
-    cell: ({ row, table }) => {
+    cell: ({ row }) => {
       const plan = row.original
-      const onViewPlan = (table.options.meta as PlanTableMeta)?.onViewPlan
 
       if (plan.isRecurring) {
         return (
@@ -191,16 +132,9 @@ export const planColumns: Array<ColumnDef<Plan>> = [
               Slot instance
             </Badge>
             {plan.parentPlan && (
-              <button
-                type="button"
-                className="max-w-[160px] truncate text-left text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onViewPlan?.(plan.parentPlan!._id)
-                }}
-              >
+              <span className="max-w-[160px] truncate text-[11px] text-muted-foreground">
                 ↳ {plan.parentPlan.title}
-              </button>
+              </span>
             )}
             {plan.timezoneMismatch && (
               <Badge
@@ -219,20 +153,6 @@ export const planColumns: Array<ColumnDef<Plan>> = [
         <Badge variant="outline" className="text-muted-foreground px-1.5">
           One-off
         </Badge>
-      )
-    },
-  },
-  {
-    id: 'category',
-    header: 'Category',
-    cell: ({ row }) => {
-      const name = row.original.category?.name
-      return name ? (
-        <Badge variant="secondary" className="text-[11px] px-1.5">
-          {name}
-        </Badge>
-      ) : (
-        <span className="text-muted-foreground">-</span>
       )
     },
   },
@@ -265,7 +185,16 @@ export const planColumns: Array<ColumnDef<Plan>> = [
   },
   {
     id: 'participants',
-    header: 'Current Participants',
+    /** People-icon header — column meaning is "Number of Participants". */
+    header: () => (
+      <span
+        className="inline-flex items-center gap-1"
+        title="Number of participants"
+      >
+        <UsersIcon className="size-4 text-muted-foreground" aria-hidden="true" />
+        <span className="sr-only">Number of participants</span>
+      </span>
+    ),
     cell: ({ row }) => {
       const plan = row.original
       const count = plan.isRecurring
@@ -275,8 +204,7 @@ export const planColumns: Array<ColumnDef<Plan>> = [
         : (plan.currentParticipants?.length ?? 0)
 
       return (
-        <div className="flex items-center gap-1">
-          <UsersIcon className="size-3 text-muted-foreground" />
+        <div className="flex items-center gap-1 tabular-nums">
           <span>{count}</span>
           {plan.isRecurring &&
             typeof plan.instanceParticipantsTotal === 'number' && (
@@ -322,61 +250,6 @@ export const planColumns: Array<ColumnDef<Plan>> = [
         <div className="flex items-center gap-1">
           <CalendarIcon className="size-3 text-muted-foreground" />
           <span className="text-xs">{formatDateTime(value)}</span>
-        </div>
-      )
-    },
-  },
-  {
-    id: 'actions',
-    header: 'Actions',
-    meta: { sticky: 'right' },
-    cell: ({ row, table }) => {
-      const meta = table.options.meta as PlanTableMeta
-      const onViewPlan = meta?.onViewPlan
-      const onSuspendPlan = meta?.onSuspendPlan
-      const isSuspended = row.original.status === 'Suspended'
-
-      const handleView = (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation()
-        onViewPlan?.(row.original._id)
-      }
-
-      const handleSuspend = (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation()
-        onSuspendPlan?.(row.original)
-      }
-
-      return (
-        <div className="flex items-center justify-start gap-1.5">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-7 px-2 text-[11px] cursor-pointer"
-            onClick={handleView}
-            disabled={!onViewPlan}
-          >
-            View
-          </Button>
-          {isSuspended ? (
-            <Badge
-              variant="outline"
-              className="h-7 px-2 text-[11px] font-medium text-destructive border-destructive/30 bg-destructive/5"
-            >
-              Suspended
-            </Badge>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-7 px-2 text-[11px] text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50 cursor-pointer"
-              onClick={handleSuspend}
-              disabled={!onSuspendPlan}
-            >
-              Suspend
-            </Button>
-          )}
         </div>
       )
     },

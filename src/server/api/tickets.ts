@@ -28,6 +28,15 @@ export interface Ticket {
     mimeType: string
     size: number
   }>
+  // ─── Phase 1 (Crisis Console) — landing fields ────────────────
+  origin?: 'USER' | 'AUTO'
+  autoRule?: string | null
+  dedupKey?: string | null
+  // ─── Phase 6 — structured metadata from detect-crises ────────
+  // Keyed by rule: e.g. { planId, planTitle, userId, payerName }
+  // for payment rules; { applicantId, pendingSince } for KYC; etc.
+  // Free-form so new rules don't need a panel type update.
+  meta?: Record<string, string | null>
 }
 
 export interface TicketReportedTargetUser {
@@ -133,6 +142,10 @@ export interface TicketSearchParams {
   priority?: string
   reason?: string
   resolutionAction?: string
+  // Phase 1 (Crisis Console) — server-side filter accepts "USER" | "AUTO".
+  // Until the API ships the field, the param is sent harmlessly and ignored.
+  origin?: string
+  autoRule?: string
   page?: number
   limit?: number
   sortBy?: string

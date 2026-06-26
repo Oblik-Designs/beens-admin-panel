@@ -1,4 +1,4 @@
-import { CalendarIcon, UserIcon } from 'lucide-react'
+import { BotIcon, CalendarIcon, UserIcon } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import type { ColumnDef } from '@tanstack/react-table'
 import type { Ticket } from '@/server/api/tickets'
@@ -44,6 +44,21 @@ export const ticketColumns: Array<ColumnDef<Ticket>> = [
     id: 'reporter',
     header: 'Reporter',
     cell: ({ row }) => {
+      // AUTO-origin (Phase 6 detect-crises) tickets have no human
+      // reporter — render a robot avatar + "System" so the column
+      // doesn't read as a missing/broken human reference.
+      if (row.original.origin === 'AUTO') {
+        return (
+          <div className="flex items-center gap-2 px-4 py-1">
+            <Avatar className="size-7">
+              <AvatarFallback className="text-muted-foreground bg-transparent border">
+                <BotIcon className="size-3.25" />
+              </AvatarFallback>
+            </Avatar>
+            <span>System</span>
+          </div>
+        )
+      }
       const reporter = row.original.reporter
       const name = getFullName(reporter)
 
@@ -124,6 +139,17 @@ export const ticketColumns: Array<ColumnDef<Ticket>> = [
     id: 'reason',
     header: 'Reason',
     cell: ({ row }) => {
+      // AUTO tickets — autoRule IS the reason. Render it verbatim
+      // (`payment_stuck_processing` → "Payment stuck processing") so
+      // the operator sees the same key they'll see in the dashboard's
+      // attention breakdown.
+      if (row.original.origin === 'AUTO' && row.original.autoRule) {
+        return (
+          <span className="block max-w-55 truncate font-mono text-[11px]">
+            {row.original.autoRule}
+          </span>
+        )
+      }
       const reportedTargets = (
         row.original as { reportedTargets?: Array<{ reason: string }> }
       )?.reportedTargets
