@@ -60,10 +60,12 @@ export const ticketSearchSchema = z.object({
   status: z.string().optional(),
   priority: z.string().optional(),
   // Phase 1 (Crisis Console) — origin discriminates human reports
-  // ("USER") from system-detected auto tickets ("AUTO"). The field
-  // is not populated by the API yet; the URL param is still parsed so
-  // we can demo + soak the UI ahead of the API.
+  // ("USER") from system-detected auto tickets ("AUTO"). Phase 6 wires
+  // the API side; the panel can now actually filter on this.
   origin: z.string().optional(),
+  /** Phase 6 — sub-filter within origin=AUTO. Free-form so we don't
+   *  ship a panel update for every new detection rule. */
+  autoRule: z.string().optional(),
   sortBy: z.enum(['priority']).default('priority'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 })
@@ -80,6 +82,7 @@ function searchToParams(
   if (search.status) params.status = search.status
   if (search.priority) params.priority = search.priority
   if (search.origin) params.origin = search.origin
+  if (search.autoRule) params.autoRule = search.autoRule
   params.sortBy = search.sortBy
   params.sortOrder = search.sortOrder
 
@@ -95,6 +98,7 @@ function countActiveFilters(search: TicketSearch): number {
   if (search.priority) count++
   if (search.reporter) count++
   if (search.origin) count++
+  if (search.autoRule) count++
   if (search.sortOrder !== 'desc') count++
   return count
 }
@@ -143,6 +147,14 @@ function buildFilterChips(
       id: 'origin',
       label: `Origin: ${search.origin === 'AUTO' ? 'Auto-detected' : 'User-reported'}`,
       onRemove: () => updateSearch({ origin: undefined }),
+    })
+  }
+
+  if (search.autoRule) {
+    chips.push({
+      id: 'autoRule',
+      label: `Rule: ${search.autoRule}`,
+      onRemove: () => updateSearch({ autoRule: undefined }),
     })
   }
 
@@ -331,6 +343,11 @@ function TicketsPage() {
     {
       label: 'High priority',
       onClick: () => updateSearch({ priority: 'HIGH', status: 'OPEN' }),
+    },
+    // Phase 6 — quick filter to the auto-detected attention queue.
+    {
+      label: 'Auto-detected',
+      onClick: () => updateSearch({ origin: 'AUTO', status: 'OPEN' }),
     },
   ]
 
