@@ -27,6 +27,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { auditActionLabel, isKnownAuditAction } from '@/lib/audit-labels'
 import { cn } from '@/lib/utils'
 import type {
     AdminAuditEntry,
@@ -487,9 +488,18 @@ function AuditDetail({ entry }: { entry: AdminAuditEntry }) {
             <AlertCircleIcon className="size-3 text-red-700" />
         ) : null
 
+    const known = isKnownAuditAction(entry.action)
     return (
         <span className="inline-flex flex-wrap items-baseline gap-x-2">
-            <span className="font-mono text-[11px]">{entry.action}</span>
+            <span
+                className={cn(
+                    'text-[11px]',
+                    known ? 'font-medium' : 'font-mono',
+                )}
+                title={known ? entry.action : undefined}
+            >
+                {auditActionLabel(entry.action)}
+            </span>
             <span className="text-muted-foreground">·</span>
             <span className="text-[11px]">{entry.actorRole.toLowerCase()}</span>
             {entry.dryRun && (

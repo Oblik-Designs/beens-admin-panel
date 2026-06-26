@@ -152,7 +152,7 @@ const executeRequest = async <T>(
             })
 
             if (!retryResponse.ok) {
-              throw new Error(`API request failed: ${retryResponse.statusText}`)
+              throw new Error(await formatApiError(retryResponse))
             }
 
             resolve(await retryResponse.json())
@@ -171,10 +171,28 @@ const executeRequest = async <T>(
       })
     }
 
-    throw new Error(`API request failed: ${response.statusText}`)
+    throw new Error(await formatApiError(response))
   }
 
   return response.json()
+}
+
+// Surface the JSON `message` field the API encodes on non-2xx responses
+// (`{ success: false, message: "..." }` — see `shared/endpoint.ts`). The
+// status code is preserved as a prefix so the panel still distinguishes
+// 400 vs 404 vs 500 in toasts, but the operator gets the *actual* reason
+// instead of the generic statusText.
+async function formatApiError(response: Response): Promise<string> {
+  let message = response.statusText
+  try {
+    const body = await response.clone().json()
+    if (body && typeof body.message === 'string' && body.message) {
+      message = body.message
+    }
+  } catch {
+    // Body wasn't JSON or was empty — fall through to statusText.
+  }
+  return `API request failed (${response.status}): ${message}`
 }
 
 export const apiClient = {
