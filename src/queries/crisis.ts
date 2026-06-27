@@ -3,6 +3,7 @@ import { queryOptions } from '@tanstack/react-query'
 import { mockAuditEntries } from '@/data/crisis-mocks'
 import {
     allowKycResubmit,
+    forceTransactionStatus,
     getPlanTimeline,
     getRemediationContext,
     getTransactionTimeline,
@@ -185,10 +186,43 @@ export const remediationContextOptions = (
 const PLACEHOLDER_PREVIEW =
     '→ (placeholder preview — endpoint ships in a later Phase 5 PR)'
 
+/**
+ * Extra per-action inputs the generic panel can't model with just a reason.
+ * `force_transaction_status` carries the operator's chosen target status here.
+ */
+export interface RemediationActionParams {
+    targetStatus?: string
+}
+
 export async function previewRemediationAction(
     action: RemediationAction,
     context: RemediationContext,
+    params?: RemediationActionParams,
 ): Promise<string> {
+    if (action.key === 'force_transaction_status') {
+        const transactionId =
+            context.targetModel === 'Transaction' ? context.targetId : null
+        if (!transactionId) {
+            return 'Cannot force status: this action targets a transaction.'
+        }
+        const targetStatus = params?.targetStatus
+        if (!targetStatus) {
+            return 'Choose a target status above to preview the change.'
+        }
+        const res = await forceTransactionStatus({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { transactionId, targetStatus, dryRun: true },
+        })
+        const d = res.data
+        return [
+            d.summary,
+            `Before: status=${d.before.status} / escrow=${d.before.escrowReleaseStatus ?? '(none)'}`,
+            `After:  status=${d.after.status} / escrow=${d.after.escrowReleaseStatus ?? '(none)'}`,
+            d.changed
+                ? 'Dry run — click Apply with a reason to write.'
+                : 'No change — transaction is already in this status.',
+        ].join('\n')
+    }
     if (action.key === 'replay_webhook') {
         const eventId = context.webhookEventId
         if (!eventId) {
@@ -345,7 +379,29 @@ export async function applyRemediationAction(
     action: RemediationAction,
     reason: string,
     context: RemediationContext,
+    params?: RemediationActionParams,
 ): Promise<RemediationApplyResponse> {
+    if (action.key === 'force_transaction_status') {
+        const transactionId =
+            context.targetModel === 'Transaction' ? context.targetId : null
+        if (!transactionId) {
+            throw new Error('Cannot force status: this action targets a transaction.')
+        }
+        const targetStatus = params?.targetStatus
+        if (!targetStatus) {
+            throw new Error('A target status is required to force the transaction.')
+        }
+        const res = await forceTransactionStatus({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { transactionId, targetStatus, dryRun: false, reason },
+        })
+        return {
+            success: res.success,
+            result: 'APPLIED',
+            auditEntryId: res.data.auditEntryId ?? '',
+            diffSummary: res.data.summary,
+        }
+    }
     if (action.key === 'replay_webhook') {
         const eventId = context.webhookEventId
         if (!eventId) {

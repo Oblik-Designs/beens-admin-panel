@@ -16,6 +16,7 @@ import {
     userTimelineOptions,
 } from '@/queries/crisis'
 import { getAdminUserByIdOptions } from '@/queries/users'
+import { useActorRole } from '@/lib/use-actor-role'
 
 /**
  * User 360 — Phase 3 / L1 of the Crisis Console.
@@ -51,8 +52,7 @@ function UserDetailPage() {
     const timelineEvents = timelineRes?.data ?? []
     const remediationContext = remediationRes?.data
 
-    // TODO(Phase 5): pull the live admin's role from the session/auth query.
-    const actorRole = 'MANAGER' as const
+    const actorRole = useActorRole()
 
     return (
         <Entity360Shell

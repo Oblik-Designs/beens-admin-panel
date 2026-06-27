@@ -10,6 +10,7 @@ import {
     remediationContextOptions,
     transactionTimelineOptions,
 } from '@/queries/crisis'
+import { useActorRole } from '@/lib/use-actor-role'
 
 /**
  * Transaction 360 — Phase 3 / L1 of the Crisis Console.
@@ -39,7 +40,7 @@ function TransactionDetailPage() {
     const timelineEvents = timelineRes?.data ?? []
     const remediationContext = remediationRes?.data
 
-    const actorRole = 'MANAGER' as const
+    const actorRole = useActorRole()
 
     return (
         <Entity360Shell
@@ -74,14 +75,15 @@ function TransactionDetailPage() {
                     <RemediationPanel
                         context={remediationContext}
                         actorRole={actorRole}
-                        onPreview={(action) =>
-                            previewRemediationAction(action, remediationContext)
+                        onPreview={(action, params) =>
+                            previewRemediationAction(action, remediationContext, params)
                         }
-                        onApply={async (action, reason) => {
+                        onApply={async (action, reason, params) => {
                             const res = await applyRemediationAction(
                                 action,
                                 reason,
                                 remediationContext,
+                                params,
                             )
                             return { auditEntryId: res.auditEntryId }
                         }}
