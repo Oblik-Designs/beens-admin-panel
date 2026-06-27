@@ -213,6 +213,41 @@ export const reconcileTransaction = createServerFn({ method: 'POST' }).handler(
     },
 )
 
+// ─── POST /admin/transactions/:id/force-status (Phase 5e) ───────────
+
+export interface ForceTransactionStatusRequest {
+    transactionId: string
+    targetStatus: string
+    dryRun: boolean
+    reason?: string
+}
+
+export interface ForceTransactionStatusResponse {
+    success: boolean
+    data: {
+        transactionId: string
+        dryRun: boolean
+        before: { status: string; escrowReleaseStatus: string | null }
+        after: { status: string; escrowReleaseStatus: string | null }
+        changed: boolean
+        summary: string
+        auditEntryId: string | null
+    }
+}
+
+export const forceTransactionStatus = createServerFn({ method: 'POST' }).handler(
+    async (ctx) => {
+        const { transactionId, targetStatus, dryRun, reason } = (ctx.data ??
+            {}) as ForceTransactionStatusRequest
+        if (!transactionId) throw new Error('transactionId is required')
+        if (!targetStatus) throw new Error('targetStatus is required')
+        return await apiClient.post<ForceTransactionStatusResponse>(
+            `/admin/transactions/${encodeURIComponent(transactionId)}/force-status`,
+            { targetStatus, dryRun, reason },
+        )
+    },
+)
+
 // ─── POST /admin/users/:id/kyc/resync (Phase 5b) ────────────────────
 
 export interface ResyncKycRequest {
