@@ -9,6 +9,7 @@ import {
   LayoutDashboardIcon,
   TicketIcon,
   UsersIcon,
+  WebhookIcon,
 } from 'lucide-react'
 import { NavMain } from '@/components/nav-main'
 import { NavUser } from '@/components/nav-user'
@@ -43,6 +44,11 @@ const navMain = [
     title: 'Tickets',
     url: '/tickets',
     icon: <TicketIcon />,
+  },
+  {
+    title: 'Webhook Events',
+    url: '/webhook-events',
+    icon: <WebhookIcon />,
   },
 ]
 

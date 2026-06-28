@@ -71,6 +71,41 @@ export interface WebhookEventSummary {
     }
 }
 
+/**
+ * Raw payload view — returned by `GET /admin/webhook-events/:id/payload`
+ * (SUPERADMIN-only). `headers` are already presence-markers (no raw
+ * secrets); `payload` is the provider body exactly as stored.
+ */
+export interface WebhookEventPayload {
+    eventId: string
+    provider: WebhookProvider
+    route: string
+    environment: string | null
+    eventName: string | null
+    receivedAt: string
+    referenceId: string | null
+    linkedTransactionId: string | null
+    linkedUserId: string | null
+    verification: {
+        status: VerificationStatus
+        method: VerificationMethod
+        detail: string | null
+    }
+    processing: {
+        status: ProcessingStatus
+        skipReason: string | null
+        errorMessage: string | null
+        durationMs: number | null
+        sideEffects: Array<string>
+    }
+    // Freeform provider data — typed `any` so the createServerFn return
+    // satisfies its serializable constraint.
+    headers: Record<string, any>
+    payload: any
+    payloadHash: string | null
+    auditEntryId: string | null
+}
+
 // ─── Admin audit entries (Phase 1 model, Phase 2 helper) ────────────
 
 export type AuditTargetModel =
