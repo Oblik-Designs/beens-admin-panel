@@ -2,6 +2,11 @@ import * as React from 'react'
 import { CheckCircle2Icon, EyeIcon, PlayIcon, ShieldAlertIcon } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 
+import type {
+    AdminRole,
+    RemediationAction,
+    RemediationContext,
+} from '@/types/crisis'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import {
@@ -21,11 +26,6 @@ import {
 import { canApply } from '@/lib/crisis-copy'
 import { cn } from '@/lib/utils'
 import { DivergenceCard } from '@/components/admin/divergence-card'
-import type {
-    AdminRole,
-    RemediationAction,
-    RemediationContext,
-} from '@/types/crisis'
 
 /**
  * Remediation panel — the operator's action surface on every 360 page.
@@ -85,13 +85,16 @@ export interface RemediationPanelProps {
         params?: RemediationActionParams,
     ) => Promise<string>
     /**
-     * Apply hook. Reason is mandatory. Should return the audit entry id.
+     * Apply hook. Reason is mandatory. Returns the audit entry id and an
+     * optional plain-language result summary — the success panel shows it
+     * in place of the preview text (Phase 9 surfaces the phantom reverse's
+     * `withdrawableDelta = ฿0` proof here).
      */
     onApply: (
         action: RemediationAction,
         reason: string,
         params?: RemediationActionParams,
-    ) => Promise<{ auditEntryId: string }>
+    ) => Promise<{ auditEntryId: string; summary?: string }>
     /**
      * Optional render slot at the bottom of the Actions section. The
      * User 360 sidebar uses this to attach a "Delete user" button next
@@ -124,6 +127,7 @@ export function RemediationPanel({
     const [success, setSuccess] = React.useState<{
         action: RemediationAction
         auditEntryId: string
+        summary?: string
     } | null>(null)
 
     const recommended = context.actions.find((a) => a.recommended)
@@ -185,7 +189,11 @@ export function RemediationPanel({
         setApplyLoading(true)
         try {
             const result = await onApply(activeAction, reason.trim(), params)
-            setSuccess({ action: activeAction, auditEntryId: result.auditEntryId })
+            setSuccess({
+                action: activeAction,
+                auditEntryId: result.auditEntryId,
+                summary: result.summary,
+            })
             // Refetch anything that might show the new audit row (timelines
             // pull from /admin/.../timeline which merges adminaudits; the
             // remediation-context itself may now report a different signal
@@ -290,9 +298,9 @@ export function RemediationPanel({
                                         {success.action.label} — applied
                                     </span>
                                 </div>
-                                {previewText && (
+                                {(success.summary ?? previewText) && (
                                     <pre className="whitespace-pre-wrap font-mono leading-relaxed">
-                                        {previewText}
+                                        {success.summary ?? previewText}
                                     </pre>
                                 )}
                                 {success.auditEntryId && (

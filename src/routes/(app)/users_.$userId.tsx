@@ -5,6 +5,10 @@ import { useQuery } from '@tanstack/react-query'
 import type { User } from '@/constants/userDataColumns'
 import { DeleteUserButton } from '@/components/admin/delete-user-button'
 import { Entity360Shell } from '@/components/admin/entity-360-shell'
+import {
+    EvidenceCard,
+    buildGhostEvidence,
+} from '@/components/admin/evidence-card'
 import { ProfileImagePreviewDialog } from '@/components/admin/profile-image-preview-dialog'
 import { RemediationPanel } from '@/components/admin/remediation-panel'
 import { Timeline } from '@/components/admin/timeline'
@@ -56,6 +60,9 @@ function UserDetailPage() {
     const remediationContext = remediationRes?.data
 
     const actorRole = useActorRole()
+    // Phase 9 — ghosted-application evidence (null unless an expiry-WITHDRAWN
+    // application is present on this user's timeline).
+    const ghostEvidence = buildGhostEvidence(timelineEvents)
 
     return (
         <Entity360Shell
@@ -82,6 +89,7 @@ function UserDetailPage() {
                     ) : (
                         <UserAdminCard user={user as User} />
                     )}
+                    {ghostEvidence && <EvidenceCard evidence={ghostEvidence} />}
                     {remediationContext ? (
                         <RemediationPanel
                             context={remediationContext}
@@ -95,7 +103,10 @@ function UserDetailPage() {
                                     reason,
                                     remediationContext,
                                 )
-                                return { auditEntryId: res.auditEntryId }
+                                return {
+                                    auditEntryId: res.auditEntryId,
+                                    summary: res.diffSummary,
+                                }
                             }}
                             footerSlot={
                                 user._id ? (

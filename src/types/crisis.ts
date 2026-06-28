@@ -215,6 +215,10 @@ export type RemediationActionKey =
     | 'reissue_code'
     | 'force_join'
     | 'mark_participant_status'
+    // Phase 9 — phantom On-Hold + ghosted-application resolve actions (§16.4)
+    | 'reverse_failed_splits'
+    | 'process_ghosted'
+    | 'resend_expiry_notice'
 
 export interface RemediationAction {
     key: RemediationActionKey
@@ -239,6 +243,21 @@ export interface RemediationContext {
      *  the action is `replay_webhook` so the panel can target
      *  `/admin/webhook-events/:id/replay` without a second lookup. */
     webhookEventId?: string | null
+    /**
+     * Phase 9 — the FAILED transaction the phantom signal derives from.
+     * Populated by the backend remediation-context when a
+     * `reverse_failed_splits` action is offered on a host's User 360 (the
+     * reverse endpoint is transaction-scoped: POST
+     * /admin/transactions/:id/reverse-failed-splits). Falls back to
+     * `targetId` when the context itself targets a Transaction.
+     */
+    transactionId?: string | null
+    /**
+     * Phase 9 — the Application a ghost signal derives from. Populated when
+     * a `process_ghosted` / `resend_expiry_notice` action is offered (both
+     * endpoints are application-scoped: POST /admin/applications/:id/...).
+     */
+    applicationId?: string | null
     actions: Array<RemediationAction>
 }
 
