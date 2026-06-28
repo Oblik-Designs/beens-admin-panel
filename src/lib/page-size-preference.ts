@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'beens-admin-page-size'
 const USERS_PAGE_SIZE_KEY = 'beens-admin-users-page-size'
+const PLANS_PAGE_SIZE_KEY = 'beens-admin-plans-page-size'
 
 function readStoredSize(key: string, fallback: number): number {
   if (typeof window === 'undefined') return fallback
@@ -37,4 +38,12 @@ export function getStoredUsersPageSize(fallback = 30): number {
 
 export function setStoredUsersPageSize(size: number): void {
   writeStoredSize(USERS_PAGE_SIZE_KEY, size)
+}
+
+export function getStoredPlansPageSize(fallback = 24): number {
+  return readStoredSize(PLANS_PAGE_SIZE_KEY, fallback)
+}
+
+export function setStoredPlansPageSize(size: number): void {
+  writeStoredSize(PLANS_PAGE_SIZE_KEY, size)
 }

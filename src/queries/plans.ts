@@ -1,4 +1,4 @@
-import { queryOptions } from '@tanstack/react-query'
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import type {
   ForceJoinParams,
   IssuePlanCodeParams,
@@ -32,6 +32,42 @@ export const searchPlansOptions = (params?: PlanSearchParams) =>
     queryFn: async () => {
       // @ts-expect-error - createServerFn types don't properly reflect POST data parameter
       return await searchPlans({ data: params })
+    },
+  })
+
+export const PLANS_LIST_BATCH_SIZE = 24
+
+export const searchPlansInfiniteOptions = (
+  baseParams: Omit<PlanSearchParams, 'page'>,
+  batchSize = PLANS_LIST_BATCH_SIZE,
+) =>
+  infiniteQueryOptions({
+    queryKey: ['plans', 'search', 'infinite', baseParams, batchSize],
+    queryFn: async ({ pageParam }) => {
+      const params: PlanSearchParams = {
+        ...baseParams,
+        page: pageParam,
+        limit: batchSize,
+      }
+      // @ts-expect-error - createServerFn types don't properly reflect POST data parameter
+      return await searchPlans({ data: params })
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages, lastPageParam) => {
+      const batch = lastPage?.data?.plans ?? []
+      if (batch.length < batchSize) return undefined
+
+      const pagination = lastPage?.data?.pagination
+      const total = pagination?.totalItems ?? 0
+      const loaded = allPages.reduce(
+        (sum, page) => sum + (page.data?.plans?.length ?? 0),
+        0,
+      )
+      if (total > 0 && loaded >= total) return undefined
+
+      const totalPages = pagination?.totalPages
+      if (totalPages != null && lastPageParam >= totalPages) return undefined
+      return lastPageParam + 1
     },
   })
 

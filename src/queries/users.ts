@@ -1,4 +1,4 @@
-import { queryOptions } from '@tanstack/react-query'
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import type { UserSearchParams, UserUpdatePayload } from '@/server/api/users'
 import {
   deleteUser,
@@ -50,6 +50,56 @@ export const searchUserOptions = (params?: UserSearchParams) =>
     queryFn: async () => {
       // @ts-expect-error - createServerFn types don't properly reflect POST data parameter
       return await searchUsers({ data: params })
+    },
+  })
+
+export const USERS_LIST_BATCH_SIZE = 24
+
+export const searchUsersInfiniteOptions = (
+  baseParams: Omit<UserSearchParams, 'page'>,
+  batchSize = USERS_LIST_BATCH_SIZE,
+) =>
+  infiniteQueryOptions({
+    queryKey: ['users', 'search', 'infinite', baseParams, batchSize],
+    queryFn: async ({ pageParam }) => {
+      const params: UserSearchParams = {
+        ...baseParams,
+        page: pageParam,
+        limit: batchSize,
+      }
+      // @ts-expect-error - createServerFn types don't properly reflect POST data parameter
+      return await searchUsers({ data: params })
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages, lastPageParam) => {
+      const payload = lastPage?.data as
+        | {
+            users?: Array<unknown>
+            total?: number
+            totalPages?: number
+            pagination?: { totalPages?: number }
+          }
+        | undefined
+      const batch = payload?.users ?? []
+      if (batch.length < batchSize) return undefined
+
+      const total = payload?.total ?? payload?.pagination?.totalUsers ?? 0
+      const loaded = allPages.reduce(
+        (sum, page) =>
+          sum +
+          (((page.data as { users?: Array<unknown> } | undefined)?.users
+            ?.length) ?? 0),
+        0,
+      )
+      if (total > 0 && loaded >= total) return undefined
+
+      const totalPages =
+        payload?.totalPages ??
+        payload?.pagination?.totalPages ??
+        (total > 0 ? Math.ceil(total / batchSize) : undefined)
+
+      if (totalPages != null && lastPageParam >= totalPages) return undefined
+      return lastPageParam + 1
     },
   })
 

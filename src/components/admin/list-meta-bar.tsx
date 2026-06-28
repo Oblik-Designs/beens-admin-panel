@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 type ListMetaBarProps = {
   total: number
   itemLabel: string
+  loadedCount?: number
   isLoading?: boolean
   presets?: Array<{ label: string; onClick: () => void }>
   onClearFilters?: () => void
@@ -16,6 +17,7 @@ type ListMetaBarProps = {
 export function ListMetaBar({
   total,
   itemLabel,
+  loadedCount,
   isLoading,
   presets,
   onClearFilters,
@@ -42,8 +44,9 @@ export function ListMetaBar({
     >
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-muted-foreground">
-          {total.toLocaleString()} {itemLabel}
-          {total === 1 ? '' : 's'} found
+          {loadedCount != null && loadedCount < total
+            ? `Showing ${loadedCount.toLocaleString()} of ${total.toLocaleString()} ${itemLabel}${total === 1 ? '' : 's'}`
+            : `${total.toLocaleString()} ${itemLabel}${total === 1 ? '' : 's'} found`}
         </span>
         {total === 0 && showClearWhenEmpty && onClearFilters && (
           <Button

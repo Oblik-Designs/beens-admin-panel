@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import {
@@ -52,16 +52,12 @@ import {
 } from '@/components/ui/combobox'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { MultiFilterGroup } from '@/components/multi-filter-group'
-import { PlansTable } from '@/components/plans-table'
-import {
-  getStoredPageSize,
-  setStoredPageSize,
-} from '@/lib/page-size-preference'
+import { PlanCardGrid } from '@/components/plan-card-grid'
 import {
   parseMultiSearchParam,
   serializeMultiSearchParam,
 } from '@/lib/multi-search-param'
-import { getPlanCategoriesOptions, searchPlansOptions } from '@/queries/plans'
+import { getPlanCategoriesOptions, searchPlansInfiniteOptions } from '@/queries/plans'
 import { getUserByIdOptions, searchUserOptions } from '@/queries/users'
 
 const PLAN_TYPE_VALUES = [
@@ -106,8 +102,6 @@ const REPORT_OPTIONS: Array<{ value: PlanReportFilter; label: string }> = [
 
 const planSearchSchema = z
   .object({
-    page: z.coerce.number().min(1).default(1),
-    limit: z.coerce.number().min(1).max(100).default(10),
     query: z.string().optional(),
     type: z.union([z.string(), z.array(z.string())]).optional(),
     status: z.union([z.string(), z.array(z.string())]).optional(),
@@ -179,11 +173,9 @@ const planSearchSchema = z
 
 type PlanSearch = z.infer<typeof planSearchSchema>
 
-function searchToParams(search: PlanSearch): PlanSearchParams {
-  const params: PlanSearchParams = {}
+function plansSearchBase(search: PlanSearch): Omit<PlanSearchParams, 'page' | 'limit'> {
+  const params: Omit<PlanSearchParams, 'page' | 'limit'> = {}
 
-  if (search.page) params.page = search.page
-  if (search.limit) params.limit = search.limit
   if (search.query) params.query = search.query
   if (search.type.length) params.type = search.type as Array<PlanTypeFilter>
   if (search.creator) params.creator = search.creator
@@ -384,15 +376,11 @@ function normalizePlanSearchInput(raw: unknown): unknown {
  *  time, so the cast at the return is the documented round-trip. */
 function planSearchToUrl(
   search: Partial<PlanSearch> & {
-    page?: number
-    limit?: number
     sortBy?: PlanSearch['sortBy']
     sortOrder?: PlanSearch['sortOrder']
   },
 ): PlanSearch {
   const url: Record<string, string | number | boolean> = {
-    page: search.page ?? 1,
-    limit: search.limit ?? 10,
     sortBy: search.sortBy ?? 'createdAt',
     sortOrder: search.sortOrder ?? 'desc',
   }
@@ -422,11 +410,6 @@ function planSearchToUrl(
 export const Route = createFileRoute('/(app)/plans')({
   validateSearch: (search) =>
     planSearchSchema.parse(normalizePlanSearchInput(search)),
-  loaderDeps: ({ search }) => search,
-  loader: ({ context, deps }) =>
-    context.queryClient.ensureQueryData(
-      searchPlansOptions(searchToParams(deps)),
-    ),
   component: PlansPage,
 })
 
@@ -451,16 +434,6 @@ function PlansPage() {
     setSelectedCreatorId(search.creator ?? '')
   }, [search.creator])
 
-  React.useEffect(() => {
-    const stored = getStoredPageSize()
-    if (stored !== search.limit) {
-      navigate({
-        search: (prev) => planSearchToUrl({ ...prev, limit: stored }),
-        replace: true,
-      })
-    }
-  }, [])
-
   const applySearchInput = React.useCallback(
     (value: string) => {
       setSearchInput(value)
@@ -471,7 +444,6 @@ function PlansPage() {
             planSearchToUrl({
               ...prev,
               query: value || undefined,
-              page: 1,
             }),
           replace: true,
         })
@@ -480,10 +452,27 @@ function PlansPage() {
     [navigate],
   )
 
-  const apiParams = searchToParams(search)
-  const { data, isLoading, isFetching } = useQuery(
-    searchPlansOptions(apiParams),
+  const baseParams = React.useMemo(() => plansSearchBase(search), [search])
+
+  const {
+    data,
+    isPending,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery(searchPlansInfiniteOptions(baseParams))
+
+  const plans = React.useMemo(
+    () =>
+      data?.pages.flatMap(
+        (page) => (page.data?.plans as Array<any> | undefined) ?? [],
+      ) ?? [],
+    [data],
   )
+
+  const totalPlans =
+    data?.pages[0]?.data?.pagination?.totalItems ?? plans.length
+  const activeFilterCount = countActiveFilters(search)
 
   const { data: selectedCreatorResponse } = useQuery({
     ...getUserByIdOptions(search.creator ?? null),
@@ -528,32 +517,6 @@ function PlansPage() {
     ? categories.find((cat) => cat.id === search.categoryId)?.name
     : undefined
 
-  const plans = (data?.data?.plans as Array<any>) ?? []
-  const pagination = data?.data?.pagination
-  const totalPlans = pagination?.totalItems ?? 0
-  const pageCount =
-    pagination?.totalPages ??
-    (search.limit > 0 ? Math.ceil(totalPlans / search.limit) : 1)
-  const pageIndex = search.page - 1
-  const activeFilterCount = countActiveFilters(search)
-
-  const handlePageChange = (newPageIndex: number) => {
-    navigate({
-      search: (prev) =>
-        planSearchToUrl({ ...prev, page: newPageIndex + 1 }),
-      replace: true,
-    })
-  }
-
-  const handlePageSizeChange = (newPageSize: number) => {
-    setStoredPageSize(newPageSize)
-    navigate({
-      search: (prev) =>
-        planSearchToUrl({ ...prev, limit: newPageSize, page: 1 }),
-      replace: true,
-    })
-  }
-
   const handleCreatorChange = (creatorId: string | null) => {
     setSelectedCreatorId(creatorId ?? '')
 
@@ -576,7 +539,6 @@ function PlansPage() {
       search: (prev) =>
         planSearchToUrl({
           ...prev,
-          page: 1,
           creator: creatorId || undefined,
         }),
       replace: true,
@@ -586,7 +548,7 @@ function PlansPage() {
   const updateSearch = React.useCallback(
     (patch: Partial<PlanSearch>) => {
       navigate({
-        search: (prev) => planSearchToUrl({ ...prev, ...patch, page: 1 }),
+        search: (prev) => planSearchToUrl({ ...prev, ...patch }),
         replace: true,
       })
     },
@@ -599,8 +561,6 @@ function PlansPage() {
     setSelectedCreatorId('')
     navigate({
       search: planSearchToUrl({
-        page: 1,
-        limit: search.limit,
         sortBy: 'createdAt',
         sortOrder: 'desc',
       }),
@@ -628,13 +588,6 @@ function PlansPage() {
     creatorDisplayName,
     selectedCategoryName,
     updateSearch,
-  )
-
-  const handleSortChange = React.useCallback(
-    (sortBy: PlanSortField, sortOrder: 'asc' | 'desc') => {
-      updateSearch({ sortBy, sortOrder })
-    },
-    [updateSearch],
   )
 
   const presets = [
@@ -1020,40 +973,29 @@ function PlansPage() {
 
               <ListMetaBar
                 total={totalPlans}
+                loadedCount={isPending ? undefined : plans.length}
                 itemLabel="plan"
-                isLoading={isLoading}
+                isLoading={isPending}
                 presets={presets}
                 onClearFilters={handleClearFilters}
                 showClearWhenEmpty
               />
 
-              {!isLoading && (
-                <PlansTable
-                  data={plans}
-                  pageIndex={pageIndex}
-                  pageSize={search.limit}
-                  pageCount={pageCount}
-                  onPageChange={handlePageChange}
-                  onPageSizeChange={handlePageSizeChange}
-                  isLoading={isFetching}
-                  sortBy={search.sortBy as PlanSortField}
-                  sortOrder={search.sortOrder}
-                  onSortChange={handleSortChange}
-                  onClearFilters={handleClearFilters}
-                  onRowClick={(plan) =>
-                    navigate({
-                      to: '/plans/$planId',
-                      params: { planId: plan._id },
-                    })
-                  }
-                />
-              )}
-
-              {isLoading && (
-                <div className="px-4 text-xs text-muted-foreground lg:px-6">
-                  Loading plans...
-                </div>
-              )}
+              <PlanCardGrid
+                plans={plans}
+                total={totalPlans}
+                isInitialLoading={isPending}
+                isFetchingMore={isFetchingNextPage}
+                hasMore={hasNextPage ?? false}
+                onLoadMore={() => fetchNextPage()}
+                onClearFilters={handleClearFilters}
+                onCardClick={(plan) =>
+                  navigate({
+                    to: '/plans/$planId',
+                    params: { planId: plan._id },
+                  })
+                }
+              />
             </div>
           </div>
         </div>
