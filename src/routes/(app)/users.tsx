@@ -32,16 +32,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { UserTable } from '@/components/user-table'
+import { UserCardGrid } from '@/components/user-card-grid'
 import {
-  getStoredPageSize,
-  setStoredPageSize,
+  getStoredUsersPageSize,
+  setStoredUsersPageSize,
 } from '@/lib/page-size-preference'
 import { searchUserOptions } from '@/queries/users'
 
 const userSearchSchema = z.object({
   page: z.coerce.number().min(1).default(1),
-  limit: z.coerce.number().min(1).max(100).default(10),
+  limit: z.coerce.number().min(1).max(100).default(30),
   query: z.string().optional(),
   sortBy: z.string().default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
@@ -49,6 +49,7 @@ const userSearchSchema = z.object({
   role: z.enum(['USER', 'ADMIN', 'MODERATOR']).default('USER'),
   gender: z.string().optional(),
   kycStatus: z.string().optional(),
+  elite: z.enum(['elite', 'non-elite']).optional(),
 })
 
 type UserSearch = z.infer<typeof userSearchSchema>
@@ -59,6 +60,8 @@ function searchToParams(search: UserSearch): UserSearchParams {
   if (search.role) filter.role = search.role
   if (search.gender) filter.gender = search.gender
   if (search.kycStatus) filter.kycStatus = search.kycStatus
+  if (search.elite === 'elite') filter.elite = true
+  if (search.elite === 'non-elite') filter.elite = false
   return {
     query: search.query,
     page: search.page,
@@ -74,6 +77,7 @@ function countActiveFilters(search: UserSearch): number {
   if (search.status) count++
   if (search.gender) count++
   if (search.kycStatus) count++
+  if (search.elite) count++
   if (search.sortOrder !== 'asc') count++
   return count
 }
@@ -116,6 +120,14 @@ function buildFilterChips(
     })
   }
 
+  if (search.elite) {
+    chips.push({
+      id: 'elite',
+      label: search.elite === 'elite' ? 'Elite only' : 'Non-elite only',
+      onRemove: () => updateSearch({ elite: undefined }),
+    })
+  }
+
   if (search.sortOrder !== 'asc') {
     chips.push({
       id: 'sort',
@@ -151,7 +163,7 @@ function UsersPage() {
   }, [search.query])
 
   React.useEffect(() => {
-    const stored = getStoredPageSize()
+    const stored = getStoredUsersPageSize()
     if (stored !== search.limit) {
       navigate({
         search: (prev) => ({ ...prev, limit: stored }),
@@ -198,7 +210,7 @@ function UsersPage() {
   }
 
   const handlePageSizeChange = (newPageSize: number) => {
-    setStoredPageSize(newPageSize)
+    setStoredUsersPageSize(newPageSize)
     navigate({
       search: (prev) => ({ ...prev, limit: newPageSize, page: 1 }),
       replace: true,
@@ -242,6 +254,10 @@ function UsersPage() {
     {
       label: 'KYC pending',
       onClick: () => updateSearch({ kycStatus: 'PENDING' }),
+    },
+    {
+      label: 'Elite',
+      onClick: () => updateSearch({ elite: 'elite' }),
     },
   ]
 
@@ -353,6 +369,33 @@ function UsersPage() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[11px] font-medium text-muted-foreground">
+                          Elite status
+                        </Label>
+                        <Select
+                          value={search.elite ?? ''}
+                          onValueChange={(value) =>
+                            updateSearch({
+                              elite:
+                                value === 'elite' || value === 'non-elite'
+                                  ? value
+                                  : undefined,
+                            })
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-full text-xs">
+                            <SelectValue placeholder="All" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">All</SelectItem>
+                            <SelectItem value="elite">Elite only</SelectItem>
+                            <SelectItem value="non-elite">
+                              Non-elite only
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium text-muted-foreground">
                           KYC status
                         </Label>
                         <Select
@@ -426,16 +469,15 @@ function UsersPage() {
               />
 
               {!isLoading && (
-                <UserTable
+                <UserCardGrid
                   data={users}
                   pageIndex={pageIndex}
                   pageSize={search.limit}
                   pageCount={pageCount}
                   onPageChange={handlePageChange}
                   onPageSizeChange={handlePageSizeChange}
-                  totalUsers={total}
                   isLoading={isFetching}
-                  onRowClick={(user) =>
+                  onCardClick={(user) =>
                     navigate({
                       to: '/users/$userId',
                       params: { userId: user._id },

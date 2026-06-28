@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { apiClient } from '../client'
+import { searchUsersWithEliteSupport } from './user-elite-search'
 
 export const getProfile = createServerFn({
   method: 'GET',
@@ -62,6 +63,8 @@ export interface UserSearchFilter {
   walletMin?: number
   walletMax?: number
   gender?: string
+  /** true = Elite only (permanentElite or active subscription), false = non-Elite */
+  elite?: boolean
   ageMin?: number
   ageMax?: number
   dobMin?: string
@@ -175,8 +178,7 @@ export const searchUsers = createServerFn({
   if (!data) {
     throw new Error('Search parameters are required')
   }
-  const result = await apiClient.post<UserSearchResponse>('/user/search', data)
-  return result
+  return searchUsersWithEliteSupport(data)
 })
 
 export interface UpdateUserRequest extends UserUpdatePayload {
