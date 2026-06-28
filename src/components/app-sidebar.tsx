@@ -8,6 +8,7 @@ import {
   CalendarClockIcon,
   LayoutDashboardIcon,
   TicketIcon,
+  TriangleAlertIcon,
   UsersIcon,
   WebhookIcon,
 } from 'lucide-react'
@@ -49,6 +50,11 @@ const navMain = [
     title: 'Webhook Events',
     url: '/webhook-events',
     icon: <WebhookIcon />,
+  },
+  {
+    title: 'Phantom On Hold',
+    url: '/phantom-on-hold',
+    icon: <TriangleAlertIcon />,
   },
 ]
 

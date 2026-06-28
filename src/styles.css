@@ -127,3 +127,103 @@
     @apply font-sans;
     }
 }
+
+/* Elite treatment — shared with beens-app-ionic-react */
+:root {
+  --elite-bright: #e2d06f;
+  --elite: #e7c465;
+  --elite-dark: #b1913d;
+  --elite-gradient: linear-gradient(
+    90deg,
+    var(--elite-bright) 0%,
+    var(--elite-dark) 50%,
+    var(--elite) 100%
+  );
+  --elite-shimmer: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 38%,
+    rgba(255, 247, 208, 0.55) 50%,
+    rgba(255, 255, 255, 0) 62%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  --elite-sweep-duration: 6s;
+}
+
+@keyframes elite-sweep {
+  0% {
+    background-position: -120% 0, 0 0;
+  }
+  100% {
+    background-position: 220% 0, 0 0;
+  }
+}
+
+.elite-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: 4px;
+  vertical-align: middle;
+  line-height: 1;
+  background-image: var(--elite-shimmer), var(--elite-gradient);
+  background-size: 220% 100%, 100% 100%;
+  background-repeat: no-repeat, no-repeat;
+  background-position: -120% 0, 0 0;
+  animation: elite-sweep var(--elite-sweep-duration) linear infinite;
+  box-shadow: 0 2px 8px rgba(123, 90, 0, 0.28);
+}
+
+.elite-badge__icon {
+  width: 11px;
+  height: 11px;
+  margin-right: 3px;
+  flex-shrink: 0;
+}
+
+.elite-badge__text {
+  font-size: 11px;
+  font-weight: 900;
+  font-style: italic;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.user-card-elite {
+  border: 2px solid transparent;
+  background-image:
+    linear-gradient(var(--card), var(--card)),
+    var(--elite-shimmer),
+    var(--elite-gradient);
+  background-size: auto, 220% 100%, 100% 100%;
+  background-position: 0 0, -120% 0, 0 0;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  animation: elite-sweep var(--elite-sweep-duration) linear infinite;
+}
+
+.user-card-overlay {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(15, 23, 43, 0.55) 70%,
+    rgba(15, 23, 43, 0.94) 100%
+  );
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+}
+
+.user-card-overlay__content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 0 0.625rem 0.625rem;
+}

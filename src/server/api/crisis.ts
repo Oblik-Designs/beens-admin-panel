@@ -139,6 +139,10 @@ interface RemediationContextResponse {
         signalKey: string | null
         divergence?: RemediationContext['divergence'] | null
         webhookEventId?: string | null
+        // Phase 9 — entity ids for the transaction-/application-scoped
+        // resolve endpoints, surfaced even when the context targets a User.
+        transactionId?: string | null
+        applicationId?: string | null
         actions: RemediationContext['actions']
     }
 }
@@ -451,6 +455,122 @@ export const unstickIncomplete = createServerFn({ method: 'POST' }).handler(
         return await apiClient.post<UnstickIncompleteResponse>(
             `/admin/users/${encodeURIComponent(userId)}/unstick-incomplete`,
             { dryRun, reason },
+        )
+    },
+)
+
+// ─── POST /admin/transactions/:id/reverse-failed-splits (Phase 9) ────
+// Phantom On-Hold verified reverse (§16.4). No dry-run: the endpoint
+// snapshots balance, reverses the orphaned FAILED-txn splits, re-reads,
+// and asserts withdrawable delta = ฿0 (expected — no real money moved).
+
+export interface ReverseFailedSplitsRequest {
+    transactionId: string
+    reason: string
+}
+
+interface BalanceSnap {
+    hostId: string
+    available: Record<string, number>
+    held: Record<string, number>
+}
+
+export interface ReverseFailedSplitsResponse {
+    success: boolean
+    data: {
+        transactionId: string
+        dryRun: boolean
+        changed: boolean
+        affectedHostIds: Array<string>
+        withdrawableDelta: number
+        before: Array<BalanceSnap>
+        after: Array<BalanceSnap>
+        summary: string
+        auditEntryId: string | null
+    }
+}
+
+export const reverseFailedSplits = createServerFn({ method: 'POST' }).handler(
+    async (ctx) => {
+        const { transactionId, reason } = (ctx.data ??
+            {}) as ReverseFailedSplitsRequest
+        if (!transactionId) throw new Error('transactionId is required')
+        if (!reason) throw new Error('reason is required')
+        return await apiClient.post<ReverseFailedSplitsResponse>(
+            `/admin/transactions/${encodeURIComponent(transactionId)}/reverse-failed-splits`,
+            { reason, dryRun: false },
+        )
+    },
+)
+
+// ─── POST /admin/applications/:id/process-ghosted (Phase 9) ──────────
+// Ghost A resolve (§16.4): expire + refund + notify the ghosted
+// application. Idempotent — re-run claims nothing (expired=0).
+
+export interface ProcessGhostedRequest {
+    applicationId: string
+    reason: string
+}
+
+export interface ProcessGhostedResponse {
+    success: boolean
+    data: {
+        applicationId: string
+        planId: string | null
+        dryRun: boolean
+        expiredReason: string | null
+        changed: boolean
+        refunded: boolean
+        refundFailed: boolean
+        summary: string
+        auditEntryId: string | null
+    }
+}
+
+export const processGhosted = createServerFn({ method: 'POST' }).handler(
+    async (ctx) => {
+        const { applicationId, reason } = (ctx.data ?? {}) as ProcessGhostedRequest
+        if (!applicationId) throw new Error('applicationId is required')
+        if (!reason) throw new Error('reason is required')
+        return await apiClient.post<ProcessGhostedResponse>(
+            `/admin/applications/${encodeURIComponent(applicationId)}/process-ghosted`,
+            { reason, dryRun: false },
+        )
+    },
+)
+
+// ─── POST /admin/applications/:id/resend-expiry-notice (Phase 9) ─────
+// Ghost B resolve (§16.4): re-emit the "Refund Issued" notice for a
+// silently-refunded application (the Redis/laptop gap — Jayrold's case).
+
+export interface ResendExpiryNoticeRequest {
+    applicationId: string
+    reason: string
+}
+
+export interface ResendExpiryNoticeResponse {
+    success: boolean
+    data: {
+        applicationId: string
+        planId: string | null
+        applicantId: string
+        dryRun: boolean
+        sent: boolean
+        refundState: 'refunded' | 'none' | 'failed'
+        summary: string
+        auditEntryId: string | null
+    }
+}
+
+export const resendExpiryNotice = createServerFn({ method: 'POST' }).handler(
+    async (ctx) => {
+        const { applicationId, reason } = (ctx.data ??
+            {}) as ResendExpiryNoticeRequest
+        if (!applicationId) throw new Error('applicationId is required')
+        if (!reason) throw new Error('reason is required')
+        return await apiClient.post<ResendExpiryNoticeResponse>(
+            `/admin/applications/${encodeURIComponent(applicationId)}/resend-expiry-notice`,
+            { reason, dryRun: false },
         )
     },
 )
