@@ -1,141 +1,99 @@
 'use client'
 
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronsLeftIcon,
-  ChevronsRightIcon,
-} from 'lucide-react'
+import * as React from 'react'
 
 import type { User } from '@/constants/userDataColumns'
+import { CardImagePinLayer } from '@/components/card-image-pin-layer'
 import { UserCard } from '@/components/user-card'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+import {
+  UserCardSkeleton,
+  UserCardSkeletonGrid,
+} from '@/components/user-card-skeleton'
+import { useInfiniteScrollSentinel } from '@/lib/use-infinite-scroll-sentinel'
+
+const noopUserClick = (_user: User) => undefined
 
 type UserCardGridProps = {
-  data: Array<User>
-  pageIndex: number
-  pageSize: number
-  pageCount: number
-  onPageChange: (pageIndex: number) => void
-  onPageSizeChange: (pageSize: number) => void
-  isLoading?: boolean
+  users: Array<User>
+  total?: number
+  isInitialLoading?: boolean
+  isFetchingMore?: boolean
+  hasMore?: boolean
+  onLoadMore?: () => void
   onCardClick?: (user: User) => void
 }
 
 export function UserCardGrid({
-  data,
-  pageIndex,
-  pageSize,
-  pageCount,
-  onPageChange,
-  onPageSizeChange,
-  isLoading = false,
+  users,
+  total,
+  isInitialLoading = false,
+  isFetchingMore = false,
+  hasMore = false,
+  onLoadMore,
   onCardClick,
 }: UserCardGridProps) {
-  const safePageCount = Math.max(0, pageCount)
-  const canPrevious = pageIndex > 0
-  const canNext = pageIndex < safePageCount - 1
+  const handleLoadMore = React.useCallback(() => {
+    if (!hasMore || isFetchingMore) return
+    onLoadMore?.()
+  }, [hasMore, isFetchingMore, onLoadMore])
+
+  const sentinelRef = useInfiniteScrollSentinel({
+    onLoadMore: handleLoadMore,
+    enabled: hasMore && !isInitialLoading,
+    resetKey: users.length,
+    isLoadingMore: isFetchingMore,
+  })
+
+  if (isInitialLoading) {
+    return (
+      <div className="px-4 lg:px-6">
+        <UserCardSkeletonGrid count={12} />
+      </div>
+    )
+  }
+
+  if (users.length === 0) {
+    return (
+      <div className="flex h-40 items-center justify-center rounded-xl border px-4 lg:mx-6">
+        <span className="text-muted-foreground text-sm">No users found.</span>
+      </div>
+    )
+  }
 
   return (
     <div className="flex w-full flex-col gap-4 px-4 lg:px-6">
-      <div className="relative">
-        {isLoading ? (
-          <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-background/50 backdrop-blur-[1px]">
-            <div className="text-muted-foreground text-xs">
-              Loading users...
-            </div>
-          </div>
-        ) : null}
-
-        {data.length > 0 ? (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-3 sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] lg:gap-4">
-            {data.map((user) => (
-              <UserCard
-                key={user._id}
-                user={user}
-                onClick={() => onCardClick?.(user)}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="flex h-40 items-center justify-center rounded-xl border">
-            <span className="text-muted-foreground text-sm">No users found.</span>
-          </div>
-        )}
+      <CardImagePinLayer
+        urls={users.map((user) => user.profileImage)}
+      />
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-3 sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] lg:gap-4">
+        {users.map((user) => (
+          <UserCard
+            key={user._id}
+            user={user}
+            onClick={onCardClick ?? noopUserClick}
+          />
+        ))}
+        {isFetchingMore
+          ? Array.from({ length: 4 }, (_, index) => (
+              <UserCardSkeleton key={`more-${index}`} />
+            ))
+          : null}
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex flex-1" />
-        <div className="flex w-full items-center gap-6 lg:w-fit">
-          <div className="hidden items-center gap-2 lg:flex">
-            <Label htmlFor="cards-per-page" className="text-sm font-medium">
-              Cards per page
-            </Label>
-            <select
-              id="cards-per-page"
-              className="border-input bg-background text-foreground focus-visible:ring-ring inline-flex h-8 w-20 items-center justify-between rounded-md border px-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:outline-none"
-              value={pageSize}
-              onChange={(event) =>
-                onPageSizeChange(Number(event.target.value))
-              }
-            >
-              {[12, 24, 30, 48, 60].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </div>
+      <div
+        ref={sentinelRef}
+        className="h-8 w-full shrink-0"
+        aria-hidden="true"
+      />
 
-          <div className="ml-auto flex items-center gap-2 lg:ml-0">
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => onPageChange(0)}
-              disabled={!canPrevious}
-            >
-              <span className="sr-only">Go to first page</span>
-              <ChevronsLeftIcon className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="size-8"
-              size="icon"
-              onClick={() => onPageChange(pageIndex - 1)}
-              disabled={!canPrevious}
-            >
-              <span className="sr-only">Go to previous page</span>
-              <ChevronLeftIcon className="size-4" />
-            </Button>
-
-            <div className="flex w-fit items-center justify-center text-sm font-medium">
-              {Math.min(pageIndex + 1, Math.max(safePageCount, 1))} of{' '}
-              {safePageCount || 1}
-            </div>
-
-            <Button
-              variant="outline"
-              className="size-8"
-              size="icon"
-              onClick={() => onPageChange(pageIndex + 1)}
-              disabled={!canNext}
-            >
-              <span className="sr-only">Go to next page</span>
-              <ChevronRightIcon className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="hidden size-8 lg:flex"
-              size="icon"
-              onClick={() => onPageChange(Math.max(safePageCount, 1) - 1)}
-              disabled={!canNext}
-            >
-              <span className="sr-only">Go to last page</span>
-              <ChevronsRightIcon className="size-4" />
-            </Button>
-          </div>
-        </div>
+      <div className="pb-4 text-center text-xs text-muted-foreground">
+        {hasMore
+          ? isFetchingMore
+            ? 'Loading more users...'
+            : 'Scroll for more'
+          : total != null && users.length < total
+            ? `Showing ${users.length.toLocaleString()} of ${total.toLocaleString()} users`
+            : `Showing ${users.length.toLocaleString()} user${users.length === 1 ? '' : 's'}`}
       </div>
     </div>
   )
