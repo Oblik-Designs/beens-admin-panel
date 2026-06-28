@@ -2,6 +2,10 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { Entity360Shell } from '@/components/admin/entity-360-shell'
+import {
+    EvidenceCard,
+    buildPhantomEvidence,
+} from '@/components/admin/evidence-card'
 import { RemediationPanel } from '@/components/admin/remediation-panel'
 import { Timeline } from '@/components/admin/timeline'
 import {
@@ -41,6 +45,9 @@ function TransactionDetailPage() {
     const remediationContext = remediationRes?.data
 
     const actorRole = useActorRole()
+    // Phase 9 — phantom On-Hold evidence (null unless this txn is a FAILED
+    // parent with un-reversed splits surfaced on the timeline).
+    const phantomEvidence = buildPhantomEvidence(timelineEvents, transactionId)
 
     return (
         <Entity360Shell
@@ -71,7 +78,15 @@ function TransactionDetailPage() {
                 )
             }
             sidebar={
-                remediationContext ? (
+                <>
+                    {phantomEvidence && (
+                        <EvidenceCard
+                            evidence={phantomEvidence}
+                            canViewRawPayload={actorRole === 'SUPERADMIN'}
+                            className="mb-4"
+                        />
+                    )}
+                    {remediationContext ? (
                     <RemediationPanel
                         context={remediationContext}
                         actorRole={actorRole}
@@ -85,12 +100,16 @@ function TransactionDetailPage() {
                                 remediationContext,
                                 params,
                             )
-                            return { auditEntryId: res.auditEntryId }
+                            return {
+                                auditEntryId: res.auditEntryId,
+                                summary: res.diffSummary,
+                            }
                         }}
                     />
-                ) : (
-                    <div className="h-32 animate-pulse rounded-lg border bg-muted/40" />
-                )
+                    ) : (
+                        <div className="h-32 animate-pulse rounded-lg border bg-muted/40" />
+                    )}
+                </>
             }
         />
     )

@@ -77,7 +77,7 @@ export const searchUsersInfiniteOptions = (
             users?: Array<unknown>
             total?: number
             totalPages?: number
-            pagination?: { totalPages?: number }
+            pagination?: { totalPages?: number; totalUsers?: number }
           }
         | undefined
       const batch = payload?.users ?? []

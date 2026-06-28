@@ -17,6 +17,7 @@ import { Route as appWebhookEventsRouteImport } from './routes/(app)/webhook-eve
 import { Route as appUsersRouteImport } from './routes/(app)/users'
 import { Route as appTicketsRouteImport } from './routes/(app)/tickets'
 import { Route as appPlansRouteImport } from './routes/(app)/plans'
+import { Route as appPhantomOnHoldRouteImport } from './routes/(app)/phantom-on-hold'
 import { Route as appUsersUserIdRouteImport } from './routes/(app)/users_.$userId'
 import { Route as appTransactionsTransactionIdRouteImport } from './routes/(app)/transactions.$transactionId'
 import { Route as appPlansPlanIdRouteImport } from './routes/(app)/plans_.$planId'
@@ -59,6 +60,11 @@ const appPlansRoute = appPlansRouteImport.update({
   path: '/plans',
   getParentRoute: () => appRouteRoute,
 } as any)
+const appPhantomOnHoldRoute = appPhantomOnHoldRouteImport.update({
+  id: '/phantom-on-hold',
+  path: '/phantom-on-hold',
+  getParentRoute: () => appRouteRoute,
+} as any)
 const appUsersUserIdRoute = appUsersUserIdRouteImport.update({
   id: '/users_/$userId',
   path: '/users/$userId',
@@ -77,6 +83,7 @@ const appPlansPlanIdRoute = appPlansPlanIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/phantom-on-hold': typeof appPhantomOnHoldRoute
   '/plans': typeof appPlansRoute
   '/tickets': typeof appTicketsRoute
   '/users': typeof appUsersRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/users/$userId': typeof appUsersUserIdRoute
 }
 export interface FileRoutesByTo {
+  '/phantom-on-hold': typeof appPhantomOnHoldRoute
   '/plans': typeof appPlansRoute
   '/tickets': typeof appTicketsRoute
   '/users': typeof appUsersRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/(app)': typeof appRouteRouteWithChildren
   '/(auth)': typeof authRouteRouteWithChildren
+  '/(app)/phantom-on-hold': typeof appPhantomOnHoldRoute
   '/(app)/plans': typeof appPlansRoute
   '/(app)/tickets': typeof appTicketsRoute
   '/(app)/users': typeof appUsersRoute
@@ -115,6 +124,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/phantom-on-hold'
     | '/plans'
     | '/tickets'
     | '/users'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/users/$userId'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/phantom-on-hold'
     | '/plans'
     | '/tickets'
     | '/users'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/(app)'
     | '/(auth)'
+    | '/(app)/phantom-on-hold'
     | '/(app)/plans'
     | '/(app)/tickets'
     | '/(app)/users'
@@ -213,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appPlansRouteImport
       parentRoute: typeof appRouteRoute
     }
+    '/(app)/phantom-on-hold': {
+      id: '/(app)/phantom-on-hold'
+      path: '/phantom-on-hold'
+      fullPath: '/phantom-on-hold'
+      preLoaderRoute: typeof appPhantomOnHoldRouteImport
+      parentRoute: typeof appRouteRoute
+    }
     '/(app)/users_/$userId': {
       id: '/(app)/users_/$userId'
       path: '/users/$userId'
@@ -238,6 +257,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface appRouteRouteChildren {
+  appPhantomOnHoldRoute: typeof appPhantomOnHoldRoute
   appPlansRoute: typeof appPlansRoute
   appTicketsRoute: typeof appTicketsRoute
   appUsersRoute: typeof appUsersRoute
@@ -249,6 +269,7 @@ interface appRouteRouteChildren {
 }
 
 const appRouteRouteChildren: appRouteRouteChildren = {
+  appPhantomOnHoldRoute: appPhantomOnHoldRoute,
   appPlansRoute: appPlansRoute,
   appTicketsRoute: appTicketsRoute,
   appUsersRoute: appUsersRoute,
