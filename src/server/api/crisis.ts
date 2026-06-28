@@ -5,6 +5,7 @@ import type {
     AuditTargetModel,
     RemediationContext,
     TimelineEvent,
+    WebhookEventPayload,
     WebhookEventSummary,
 } from '@/types/crisis'
 
@@ -20,7 +21,7 @@ import type {
 // ─── POST /admin/webhook-events ─────────────────────────────────────
 
 export interface WebhookEventsSearchParams {
-    provider?: 'XENDIT' | 'SUMSUB'
+    provider?: 'XENDIT' | 'SUMSUB' | 'TWILIO' | 'BREVO'
     eventName?: string
     referenceId?: string
     linkedTransactionId?: string
@@ -53,6 +54,23 @@ export const searchWebhookEvents = createServerFn({ method: 'POST' }).handler(
         return await apiClient.post<WebhookEventsSearchResponse>(
             '/admin/webhook-events',
             params,
+        )
+    },
+)
+
+// ─── GET /admin/webhook-events/:id/payload (SUPERADMIN) ─────────────
+
+interface WebhookEventPayloadResponse {
+    success: boolean
+    data: WebhookEventPayload
+}
+
+export const getWebhookEventPayload = createServerFn({ method: 'GET' }).handler(
+    async (ctx) => {
+        const eventId = (ctx.data ?? '') as string
+        if (!eventId) throw new Error('eventId is required')
+        return await apiClient.get<WebhookEventPayloadResponse>(
+            `/admin/webhook-events/${encodeURIComponent(eventId)}/payload`,
         )
     },
 )
