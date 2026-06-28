@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 
@@ -8,6 +9,7 @@ import {
     EvidenceCard,
     buildGhostEvidence,
 } from '@/components/admin/evidence-card'
+import { ProfileImagePreviewDialog } from '@/components/admin/profile-image-preview-dialog'
 import { RemediationPanel } from '@/components/admin/remediation-panel'
 import { Timeline } from '@/components/admin/timeline'
 import { UserAdminCard } from '@/components/admin/user-admin-card'
@@ -21,6 +23,7 @@ import {
 } from '@/queries/crisis'
 import { getAdminUserByIdOptions } from '@/queries/users'
 import { useActorRole } from '@/lib/use-actor-role'
+import { cn } from '@/lib/utils'
 
 /**
  * User 360 — Phase 3 / L1 of the Crisis Console.
@@ -147,6 +150,8 @@ interface UserSummaryCardProps {
 }
 
 function UserSummaryCard({ user, userId, isLoading }: UserSummaryCardProps) {
+    const [previewOpen, setPreviewOpen] = React.useState(false)
+
     if (isLoading) {
         return (
             <div className="rounded-lg border bg-muted/40 px-4 py-3">
@@ -188,6 +193,14 @@ function UserSummaryCard({ user, userId, isLoading }: UserSummaryCardProps) {
     const kycStatus = (user.kyc?.status as string | undefined) ?? null
     const wallet = user.wallet as number | undefined
     const profileImage = (user.profileImage as string | undefined) ?? undefined
+    const hasProfileImage = Boolean(profileImage?.trim())
+
+    const avatar = (
+        <Avatar className="size-10 shrink-0">
+            <AvatarImage src={profileImage} alt={displayName} />
+            <AvatarFallback>{initialsOf(displayName)}</AvatarFallback>
+        </Avatar>
+    )
 
     return (
         <div className="rounded-lg border bg-muted/40 px-4 py-3">
@@ -198,10 +211,22 @@ function UserSummaryCard({ user, userId, isLoading }: UserSummaryCardProps) {
                         User
                     </div>
                     <div className="flex items-start gap-3">
-                        <Avatar className="size-10 shrink-0">
-                            <AvatarImage src={profileImage} alt={displayName} />
-                            <AvatarFallback>{initialsOf(displayName)}</AvatarFallback>
-                        </Avatar>
+                        {hasProfileImage ? (
+                            <button
+                                type="button"
+                                onClick={() => setPreviewOpen(true)}
+                                className={cn(
+                                    'shrink-0 rounded-full',
+                                    'cursor-zoom-in transition hover:opacity-90',
+                                    'focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+                                )}
+                                aria-label={`View ${displayName} profile photo`}
+                            >
+                                {avatar}
+                            </button>
+                        ) : (
+                            avatar
+                        )}
                         <div className="min-w-0 flex-1 space-y-0.5">
                             <div className="truncate text-sm font-semibold">
                                 {displayName}
@@ -227,6 +252,15 @@ function UserSummaryCard({ user, userId, isLoading }: UserSummaryCardProps) {
                     mono
                 />
             </div>
+
+            {hasProfileImage ? (
+                <ProfileImagePreviewDialog
+                    open={previewOpen}
+                    onOpenChange={setPreviewOpen}
+                    src={profileImage!}
+                    alt={displayName}
+                />
+            ) : null}
         </div>
     )
 }
