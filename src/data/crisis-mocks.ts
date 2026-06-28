@@ -210,6 +210,26 @@ export const mockUserTimeline: Array<TimelineEvent> = [
         summary: 'kyc.resync applied by Sam (moderator)',
         payload: mockAuditEntries[1]!,
     },
+    {
+        id: 'tl-7',
+        kind: 'activity',
+        timestamp: '2026-06-23T07:40:11.000Z',
+        outcome: 'OK',
+        status: 201,
+        route: 'POST /auth/signup',
+        reason: null,
+        summary: 'Signup completed',
+    },
+    {
+        id: 'tl-8',
+        kind: 'activity',
+        timestamp: '2026-06-23T07:55:02.000Z',
+        outcome: 'FAILED',
+        status: 422,
+        route: 'POST /plans',
+        reason: 'invalid timezone',
+        summary: 'Plan create rejected — invalid timezone',
+    },
 ]
 
 // ─── Remediation context (drives RemediationPanel) ──────────────────

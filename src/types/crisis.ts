@@ -142,6 +142,7 @@ export type TimelineEventType =
     | 'user_status'
     | 'application'
     | 'notification'
+    | 'activity'
 
 export interface TimelineEventBase<TKind extends TimelineEventType, TPayload> {
     id: string
@@ -149,6 +150,25 @@ export interface TimelineEventBase<TKind extends TimelineEventType, TPayload> {
     at: string
     summary: string
     payload: TPayload
+}
+
+/**
+ * Per-user diagnostic event (signup + plan-creation outcomes) surfaced on
+ * the User 360 timeline. Emitted by beens-api's diagnostic-events source so
+ * an operator can see *why* a generic action failed (e.g. a plain
+ * "Couldn't create the Plan. Try again" becomes "Plan create rejected —
+ * invalid timezone"). Unlike the other kinds this row is flat — fields live
+ * at the top level (no `payload`) and the timestamp arrives as `timestamp`.
+ */
+export interface TimelineActivityEvent {
+    id: string
+    kind: 'activity'
+    timestamp: string
+    outcome: 'OK' | 'FAILED'
+    status: number
+    route: string
+    reason: string | null
+    summary: string
 }
 
 export type TimelineEvent =
@@ -199,6 +219,7 @@ export type TimelineEvent =
             'notification',
             { type: string; title: string; channel: 'push' | 'email' | 'sms' }
         >
+    | TimelineActivityEvent
 
 // ─── Remediation actions (Phase 5) ──────────────────────────────────
 
