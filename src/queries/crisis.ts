@@ -601,7 +601,7 @@ export async function applyRemediationAction(
         const d = res.data
         const delta = d.withdrawableDelta
         // Q1 invariant: withdrawable must not move. Surface the delta
-        // prominently so the operator sees the ฿0 proof in the toast.
+        // prominently so the operator sees the ฿0 proof in the result panel.
         const deltaLine =
             delta === 0
                 ? `Withdrawable delta: ${thb(0)} ✓ (no real money moved)`
@@ -610,13 +610,7 @@ export async function applyRemediationAction(
             success: res.success,
             result: 'APPLIED',
             auditEntryId: d.auditEntryId ?? '',
-            diffSummary: d.changed
-                ? [
-                      `Reversed orphaned splits on FAILED txn ${d.transactionId}.`,
-                      `Held ${thb(d.before.held)} → ${thb(d.after.held)}.`,
-                      deltaLine,
-                  ].join('\n')
-                : `No change — splits on txn ${d.transactionId} were already reversed. ${deltaLine}`,
+            diffSummary: `${d.summary}\n${deltaLine}`,
         }
     }
     if (action.key === 'process_ghosted') {
@@ -637,7 +631,7 @@ export async function applyRemediationAction(
             auditEntryId: d.auditEntryId ?? '',
             diffSummary:
                 d.summary ||
-                `Processed ghosted application ${appId}: expired=${d.expired}, refunded=${d.refunded}, notified=${d.notified}.`,
+                `Processed ghosted application ${appId}: changed=${d.changed}, refunded=${d.refunded}, refundFailed=${d.refundFailed}.`,
         }
     }
     if (action.key === 'resend_expiry_notice') {

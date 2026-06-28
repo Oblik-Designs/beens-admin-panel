@@ -469,20 +469,23 @@ export interface ReverseFailedSplitsRequest {
     reason: string
 }
 
-interface BalanceSnapshot {
-    withdrawable: number
-    held: number
+interface BalanceSnap {
+    hostId: string
+    available: Record<string, number>
+    held: Record<string, number>
 }
 
 export interface ReverseFailedSplitsResponse {
     success: boolean
     data: {
         transactionId: string
-        before: BalanceSnapshot
-        after: BalanceSnapshot
-        withdrawableDelta: number
+        dryRun: boolean
         changed: boolean
-        currency: string
+        affectedHostIds: Array<string>
+        withdrawableDelta: number
+        before: Array<BalanceSnap>
+        after: Array<BalanceSnap>
+        summary: string
         auditEntryId: string | null
     }
 }
@@ -495,7 +498,7 @@ export const reverseFailedSplits = createServerFn({ method: 'POST' }).handler(
         if (!reason) throw new Error('reason is required')
         return await apiClient.post<ReverseFailedSplitsResponse>(
             `/admin/transactions/${encodeURIComponent(transactionId)}/reverse-failed-splits`,
-            { reason },
+            { reason, dryRun: false },
         )
     },
 )
@@ -513,9 +516,12 @@ export interface ProcessGhostedResponse {
     success: boolean
     data: {
         applicationId: string
-        expired: number
-        refunded: number
-        notified: number
+        planId: string | null
+        dryRun: boolean
+        expiredReason: string | null
+        changed: boolean
+        refunded: boolean
+        refundFailed: boolean
         summary: string
         auditEntryId: string | null
     }
@@ -528,7 +534,7 @@ export const processGhosted = createServerFn({ method: 'POST' }).handler(
         if (!reason) throw new Error('reason is required')
         return await apiClient.post<ProcessGhostedResponse>(
             `/admin/applications/${encodeURIComponent(applicationId)}/process-ghosted`,
-            { reason },
+            { reason, dryRun: false },
         )
     },
 )
@@ -546,7 +552,11 @@ export interface ResendExpiryNoticeResponse {
     success: boolean
     data: {
         applicationId: string
+        planId: string | null
+        applicantId: string
+        dryRun: boolean
         sent: boolean
+        refundState: 'refunded' | 'none' | 'failed'
         summary: string
         auditEntryId: string | null
     }
@@ -560,7 +570,7 @@ export const resendExpiryNotice = createServerFn({ method: 'POST' }).handler(
         if (!reason) throw new Error('reason is required')
         return await apiClient.post<ResendExpiryNoticeResponse>(
             `/admin/applications/${encodeURIComponent(applicationId)}/resend-expiry-notice`,
-            { reason },
+            { reason, dryRun: false },
         )
     },
 )
