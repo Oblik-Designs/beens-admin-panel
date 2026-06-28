@@ -1,22 +1,5 @@
 import { queryOptions } from '@tanstack/react-query'
 
-import { mockAuditEntries } from '@/data/crisis-mocks'
-import {
-    allowKycResubmit,
-    forceTransactionStatus,
-    getPlanTimeline,
-    getRemediationContext,
-    getTransactionTimeline,
-    getUserTimeline,
-    reconcileTransaction,
-    replayWebhookEvent,
-    resendOtp,
-    resyncKyc,
-    searchWebhookEvents,
-    unstickIncomplete,
-    verifyContact,
-    type WebhookEventsSearchParams,
-} from '@/server/api/crisis'
 import type {
     AdminAuditEntry,
     AuditTargetModel,
@@ -26,6 +9,27 @@ import type {
     TimelineEvent,
     WebhookEventSummary,
 } from '@/types/crisis'
+import type {WebhookEventsSearchParams} from '@/server/api/crisis';
+import { mockAuditEntries } from '@/data/crisis-mocks'
+import {
+    
+    allowKycResubmit,
+    forceTransactionStatus,
+    getPlanTimeline,
+    getRemediationContext,
+    getTransactionTimeline,
+    getUserTimeline,
+    processGhosted,
+    reconcileTransaction,
+    replayWebhookEvent,
+    resendExpiryNotice,
+    resendOtp,
+    resyncKyc,
+    reverseFailedSplits,
+    searchWebhookEvents,
+    unstickIncomplete,
+    verifyContact
+} from '@/server/api/crisis'
 
 /**
  * Crisis Console queries.
@@ -168,7 +172,9 @@ export const remediationContextOptions = (
                     summary: res.data.summary,
                     divergence: res.data.divergence ?? undefined,
                     webhookEventId: res.data.webhookEventId ?? null,
-                    actions: res.data.actions as Array<RemediationAction>,
+                    transactionId: res.data.transactionId ?? null,
+                    applicationId: res.data.applicationId ?? null,
+                    actions: res.data.actions,
                 },
             }
         },
@@ -371,8 +377,70 @@ export async function previewRemediationAction(
             'Dry run — click Apply with a reason to write.',
         ].join('\n')
     }
+    // ── Phase 9 — phantom / ghost resolves ──────────────────────────
+    // These endpoints have no dry-run (§16.4): the reverse is verified
+    // server-side and is reversible data hygiene, the ghost resolves are
+    // idempotent. So Preview here is purely informational — it describes
+    // what Apply will do without touching the backend.
+    if (action.key === 'reverse_failed_splits') {
+        const txnId = resolvePhantomTxnId(context)
+        if (!txnId) {
+            return 'Cannot reverse: no FAILED transaction is linked to this signal.'
+        }
+        return [
+            `Will reverse the orphaned HELD/AVAILABLE splits on FAILED txn ${txnId}.`,
+            'Verified server-side: balance is snapshotted before/after and the',
+            'withdrawable delta must be ฿0 (the display-layer fix already shipped —',
+            'this is data reconciliation only, no real money moves).',
+            'Apply requires a reason and writes an audit row.',
+        ].join('\n')
+    }
+    if (action.key === 'process_ghosted') {
+        const appId = context.applicationId
+        if (!appId) {
+            return 'Cannot process: no ghosted application is linked to this signal.'
+        }
+        return [
+            `Will expire + refund + notify the ghosted application ${appId}.`,
+            'Runs in-cluster, so the refund notification actually delivers',
+            '(unlike the laptop runbook run). Idempotent — re-running claims',
+            'nothing if it already processed.',
+            'Apply requires a reason and writes an audit row.',
+        ].join('\n')
+    }
+    if (action.key === 'resend_expiry_notice') {
+        const appId = context.applicationId
+        if (!appId) {
+            return 'Cannot resend: no application is linked to this signal.'
+        }
+        return [
+            `Will re-emit the "Refund Issued" notice for application ${appId}.`,
+            'Use when the refund landed but the joiner was never notified',
+            '(the Redis/laptop silent-refund gap). Apply requires a reason.',
+        ].join('\n')
+    }
+
     await delay(200)
     return `Would call: ${action.key}\n${PLACEHOLDER_PREVIEW}`
+}
+
+/**
+ * Phase 9 — resolve the FAILED transaction id a phantom reverse targets.
+ * When the context targets a Transaction directly use its id; otherwise
+ * (e.g. on the host's User 360) fall back to the `transactionId` the
+ * backend remediation-context surfaces alongside the action.
+ */
+function resolvePhantomTxnId(context: RemediationContext): string | null {
+    if (context.targetModel === 'Transaction') return context.targetId
+    return context.transactionId ?? null
+}
+
+/** Format a THB amount with a ฿ sign and two decimals. */
+function thb(amount: number): string {
+    return `฿${amount.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`
 }
 
 export async function applyRemediationAction(
@@ -518,6 +586,84 @@ export async function applyRemediationAction(
             diffSummary: res.data.summary,
         }
     }
+    // ── Phase 9 — phantom / ghost resolves ──────────────────────────
+    if (action.key === 'reverse_failed_splits') {
+        const txnId = resolvePhantomTxnId(context)
+        if (!txnId) {
+            throw new Error(
+                'Cannot reverse: no FAILED transaction is linked to this signal.',
+            )
+        }
+        const res = await reverseFailedSplits({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { transactionId: txnId, reason },
+        })
+        const d = res.data
+        const delta = d.withdrawableDelta
+        // Q1 invariant: withdrawable must not move. Surface the delta
+        // prominently so the operator sees the ฿0 proof in the toast.
+        const deltaLine =
+            delta === 0
+                ? `Withdrawable delta: ${thb(0)} ✓ (no real money moved)`
+                : `⚠ Withdrawable delta: ${thb(delta)} — expected ฿0, escalate.`
+        return {
+            success: res.success,
+            result: 'APPLIED',
+            auditEntryId: d.auditEntryId ?? '',
+            diffSummary: d.changed
+                ? [
+                      `Reversed orphaned splits on FAILED txn ${d.transactionId}.`,
+                      `Held ${thb(d.before.held)} → ${thb(d.after.held)}.`,
+                      deltaLine,
+                  ].join('\n')
+                : `No change — splits on txn ${d.transactionId} were already reversed. ${deltaLine}`,
+        }
+    }
+    if (action.key === 'process_ghosted') {
+        const appId = context.applicationId
+        if (!appId) {
+            throw new Error(
+                'Cannot process: no ghosted application is linked to this signal.',
+            )
+        }
+        const res = await processGhosted({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { applicationId: appId, reason },
+        })
+        const d = res.data
+        return {
+            success: res.success,
+            result: 'APPLIED',
+            auditEntryId: d.auditEntryId ?? '',
+            diffSummary:
+                d.summary ||
+                `Processed ghosted application ${appId}: expired=${d.expired}, refunded=${d.refunded}, notified=${d.notified}.`,
+        }
+    }
+    if (action.key === 'resend_expiry_notice') {
+        const appId = context.applicationId
+        if (!appId) {
+            throw new Error(
+                'Cannot resend: no application is linked to this signal.',
+            )
+        }
+        const res = await resendExpiryNotice({
+            // @ts-expect-error - createServerFn types don't reflect POST data parameter
+            data: { applicationId: appId, reason },
+        })
+        const d = res.data
+        return {
+            success: res.success,
+            result: 'APPLIED',
+            auditEntryId: d.auditEntryId ?? '',
+            diffSummary:
+                d.summary ||
+                (d.sent
+                    ? `Re-sent the "Refund Issued" notice for application ${appId}.`
+                    : `No notice sent for application ${appId}.`),
+        }
+    }
+
     await delay(400)
     return {
         success: true,
