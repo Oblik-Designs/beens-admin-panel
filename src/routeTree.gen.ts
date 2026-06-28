@@ -13,6 +13,7 @@ import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as appRouteRouteImport } from './routes/(app)/route'
 import { Route as appIndexRouteImport } from './routes/(app)/index'
 import { Route as authLoginRouteImport } from './routes/(auth)/login'
+import { Route as appWebhookEventsRouteImport } from './routes/(app)/webhook-events'
 import { Route as appUsersRouteImport } from './routes/(app)/users'
 import { Route as appTicketsRouteImport } from './routes/(app)/tickets'
 import { Route as appPlansRouteImport } from './routes/(app)/plans'
@@ -37,6 +38,11 @@ const authLoginRoute = authLoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => authRouteRoute,
+} as any)
+const appWebhookEventsRoute = appWebhookEventsRouteImport.update({
+  id: '/webhook-events',
+  path: '/webhook-events',
+  getParentRoute: () => appRouteRoute,
 } as any)
 const appUsersRoute = appUsersRouteImport.update({
   id: '/users',
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/plans': typeof appPlansRoute
   '/tickets': typeof appTicketsRoute
   '/users': typeof appUsersRoute
+  '/webhook-events': typeof appWebhookEventsRoute
   '/login': typeof authLoginRoute
   '/': typeof appIndexRoute
   '/plans/$planId': typeof appPlansPlanIdRoute
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/plans': typeof appPlansRoute
   '/tickets': typeof appTicketsRoute
   '/users': typeof appUsersRoute
+  '/webhook-events': typeof appWebhookEventsRoute
   '/login': typeof authLoginRoute
   '/': typeof appIndexRoute
   '/plans/$planId': typeof appPlansPlanIdRoute
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/(app)/plans': typeof appPlansRoute
   '/(app)/tickets': typeof appTicketsRoute
   '/(app)/users': typeof appUsersRoute
+  '/(app)/webhook-events': typeof appWebhookEventsRoute
   '/(auth)/login': typeof authLoginRoute
   '/(app)/': typeof appIndexRoute
   '/(app)/plans_/$planId': typeof appPlansPlanIdRoute
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/plans'
     | '/tickets'
     | '/users'
+    | '/webhook-events'
     | '/login'
     | '/'
     | '/plans/$planId'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/plans'
     | '/tickets'
     | '/users'
+    | '/webhook-events'
     | '/login'
     | '/'
     | '/plans/$planId'
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/(app)/plans'
     | '/(app)/tickets'
     | '/(app)/users'
+    | '/(app)/webhook-events'
     | '/(auth)/login'
     | '/(app)/'
     | '/(app)/plans_/$planId'
@@ -172,6 +184,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/login'
       preLoaderRoute: typeof authLoginRouteImport
       parentRoute: typeof authRouteRoute
+    }
+    '/(app)/webhook-events': {
+      id: '/(app)/webhook-events'
+      path: '/webhook-events'
+      fullPath: '/webhook-events'
+      preLoaderRoute: typeof appWebhookEventsRouteImport
+      parentRoute: typeof appRouteRoute
     }
     '/(app)/users': {
       id: '/(app)/users'
@@ -222,6 +241,7 @@ interface appRouteRouteChildren {
   appPlansRoute: typeof appPlansRoute
   appTicketsRoute: typeof appTicketsRoute
   appUsersRoute: typeof appUsersRoute
+  appWebhookEventsRoute: typeof appWebhookEventsRoute
   appIndexRoute: typeof appIndexRoute
   appPlansPlanIdRoute: typeof appPlansPlanIdRoute
   appTransactionsTransactionIdRoute: typeof appTransactionsTransactionIdRoute
@@ -232,6 +252,7 @@ const appRouteRouteChildren: appRouteRouteChildren = {
   appPlansRoute: appPlansRoute,
   appTicketsRoute: appTicketsRoute,
   appUsersRoute: appUsersRoute,
+  appWebhookEventsRoute: appWebhookEventsRoute,
   appIndexRoute: appIndexRoute,
   appPlansPlanIdRoute: appPlansPlanIdRoute,
   appTransactionsTransactionIdRoute: appTransactionsTransactionIdRoute,
