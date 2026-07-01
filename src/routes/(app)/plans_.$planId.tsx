@@ -3,12 +3,14 @@ import { useQuery } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 
 import { Entity360Shell } from '@/components/admin/entity-360-shell'
+import { CardImagePinLayer } from '@/components/card-image-pin-layer'
+import { CachedAvatarImage } from '@/components/cached-avatar-image'
+import { ImagePreviewButton } from '@/components/admin/image-preview-button'
 import { PlanParticipantsCard } from '@/components/admin/plan-participants-card'
 import { PlanSummaryCard } from '@/components/admin/plan-summary-card'
 import { RemediationPanel } from '@/components/admin/remediation-panel'
 import { SuspendPlanButton } from '@/components/admin/suspend-plan-button'
 import { Timeline } from '@/components/admin/timeline'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
     applyRemediationAction,
@@ -216,6 +218,7 @@ function PlanHeaderCard({ plan, planId, isLoading }: PlanHeaderCardProps) {
 
     return (
         <div className="rounded-lg border bg-muted/40 px-4 py-3">
+            <CardImagePinLayer urls={[primaryImage, creatorImage]} />
             <div className="flex flex-wrap items-start gap-6">
                 {/* Plan identity column */}
                 <div className="w-80 shrink-0 space-y-1.5">
@@ -223,10 +226,27 @@ function PlanHeaderCard({ plan, planId, isLoading }: PlanHeaderCardProps) {
                         Plan
                     </div>
                     <div className="flex items-start gap-3">
-                        <Avatar className="size-10 shrink-0 rounded-md">
-                            <AvatarImage src={primaryImage} alt={title} />
-                            <AvatarFallback className="rounded-md">P</AvatarFallback>
-                        </Avatar>
+                        <ImagePreviewButton
+                            src={primaryImage}
+                            alt={title}
+                            label="plan photo"
+                            className="shrink-0 overflow-hidden rounded-md"
+                            ariaLabel={`View ${title} photo`}
+                        >
+                            {primaryImage ? (
+                                <CachedAvatarImage
+                                    src={primaryImage}
+                                    alt={title}
+                                    className="size-10 shrink-0 rounded-md"
+                                    imageClassName="rounded-md"
+                                    fallback={<span>P</span>}
+                                />
+                            ) : (
+                                <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-muted text-sm font-medium">
+                                    P
+                                </div>
+                            )}
+                        </ImagePreviewButton>
                         <div className="min-w-0 flex-1 space-y-0.5">
                             <div className="truncate text-sm font-semibold">
                                 {title}
@@ -245,12 +265,24 @@ function PlanHeaderCard({ plan, planId, isLoading }: PlanHeaderCardProps) {
                     </div>
                     {creatorName ? (
                         <div className="flex items-start gap-3">
-                            <Avatar className="size-10 shrink-0">
-                                <AvatarImage src={creatorImage} alt={creatorName} />
-                                <AvatarFallback>
-                                    {creatorName[0]?.toUpperCase() ?? '?'}
-                                </AvatarFallback>
-                            </Avatar>
+                            <ImagePreviewButton
+                                src={creatorImage}
+                                alt={creatorName}
+                                label="profile photo"
+                                className="shrink-0 rounded-full"
+                                ariaLabel={`View ${creatorName} profile photo`}
+                            >
+                                <CachedAvatarImage
+                                    src={creatorImage}
+                                    alt={creatorName}
+                                    className="size-10 shrink-0"
+                                    fallback={
+                                        <span>
+                                            {creatorName[0]?.toUpperCase() ?? '?'}
+                                        </span>
+                                    }
+                                />
+                            </ImagePreviewButton>
                             <div className="min-w-0 flex-1 space-y-0.5">
                                 {creatorId ? (
                                     <Link

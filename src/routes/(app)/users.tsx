@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import {
@@ -33,15 +33,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { UserCardGrid } from '@/components/user-card-grid'
-import {
-  getStoredUsersPageSize,
-  setStoredUsersPageSize,
-} from '@/lib/page-size-preference'
-import { searchUserOptions } from '@/queries/users'
+import { searchUsersInfiniteOptions } from '@/queries/users'
 
 const userSearchSchema = z.object({
-  page: z.coerce.number().min(1).default(1),
-  limit: z.coerce.number().min(1).max(100).default(30),
   query: z.string().optional(),
   sortBy: z.string().default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('asc'),
@@ -54,7 +48,7 @@ const userSearchSchema = z.object({
 
 type UserSearch = z.infer<typeof userSearchSchema>
 
-function searchToParams(search: UserSearch): UserSearchParams {
+function usersSearchBase(search: UserSearch): Omit<UserSearchParams, 'page' | 'limit'> {
   const filter: UserSearchParams['filter'] = {}
   if (search.status) filter.status = search.status
   if (search.role) filter.role = search.role
@@ -64,8 +58,6 @@ function searchToParams(search: UserSearch): UserSearchParams {
   if (search.elite === 'non-elite') filter.elite = false
   return {
     query: search.query,
-    page: search.page,
-    limit: search.limit,
     sortBy: search.sortBy,
     sortOrder: search.sortOrder,
     ...(Object.keys(filter).length ? { filter } : {}),
@@ -141,11 +133,6 @@ function buildFilterChips(
 
 export const Route = createFileRoute('/(app)/users')({
   validateSearch: (search) => userSearchSchema.parse(search),
-  loaderDeps: ({ search }) => search,
-  loader: ({ context, deps }) =>
-    context.queryClient.ensureQueryData(
-      searchUserOptions(searchToParams(deps)),
-    ),
   component: UsersPage,
 })
 
@@ -162,16 +149,6 @@ function UsersPage() {
     setSearchInput(search.query ?? '')
   }, [search.query])
 
-  React.useEffect(() => {
-    const stored = getStoredUsersPageSize()
-    if (stored !== search.limit) {
-      navigate({
-        search: (prev) => ({ ...prev, limit: stored }),
-        replace: true,
-      })
-    }
-  }, [])
-
   const applySearchInput = React.useCallback(
     (value: string) => {
       setSearchInput(value)
@@ -181,7 +158,6 @@ function UsersPage() {
           search: (prev) => ({
             ...prev,
             query: value || undefined,
-            page: 1,
           }),
           replace: true,
         })
@@ -190,37 +166,35 @@ function UsersPage() {
     [navigate],
   )
 
-  const apiParams = searchToParams(search)
-  const { data, isLoading, isFetching } = useQuery(searchUserOptions(apiParams))
+  const baseParams = React.useMemo(() => usersSearchBase(search), [search])
 
-  const payload: any = data?.data
-  const users = (payload?.users as Array<any>) ?? []
-  const total = payload?.total ?? payload?.pagination?.totalUsers ?? 0
-  const apiTotalPages = payload?.totalPages ?? payload?.pagination?.totalPages
-  const pageCount =
-    apiTotalPages ?? (search.limit > 0 ? Math.ceil(total / search.limit) : 1)
-  const pageIndex = search.page - 1
+  const {
+    data,
+    isPending,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery(searchUsersInfiniteOptions(baseParams))
+
+  const users = React.useMemo(
+    () =>
+      data?.pages.flatMap(
+        (page) => (page.data?.users as Array<any> | undefined) ?? [],
+      ) ?? [],
+    [data],
+  )
+
+  const firstPage = data?.pages[0]?.data as
+    | { total?: number; pagination?: { totalUsers?: number } }
+    | undefined
+  const total =
+    firstPage?.total ?? firstPage?.pagination?.totalUsers ?? users.length
   const activeFilterCount = countActiveFilters(search)
-
-  const handlePageChange = (newPageIndex: number) => {
-    navigate({
-      search: (prev) => ({ ...prev, page: newPageIndex + 1 }),
-      replace: true,
-    })
-  }
-
-  const handlePageSizeChange = (newPageSize: number) => {
-    setStoredUsersPageSize(newPageSize)
-    navigate({
-      search: (prev) => ({ ...prev, limit: newPageSize, page: 1 }),
-      replace: true,
-    })
-  }
 
   const updateSearch = React.useCallback(
     (patch: Partial<UserSearch>) => {
       navigate({
-        search: (prev) => ({ ...prev, ...patch, page: 1 }),
+        search: (prev) => ({ ...prev, ...patch }),
         replace: true,
       })
     },
@@ -231,8 +205,6 @@ function UsersPage() {
     setSearchInput('')
     navigate({
       search: {
-        page: 1,
-        limit: search.limit,
         role: 'USER',
         sortBy: 'createdAt',
         sortOrder: 'asc',
@@ -461,36 +433,28 @@ function UsersPage() {
 
               <ListMetaBar
                 total={total}
+                loadedCount={isPending ? undefined : users.length}
                 itemLabel="user"
-                isLoading={isLoading}
+                isLoading={isPending}
                 presets={presets}
                 onClearFilters={handleClearFilters}
                 showClearWhenEmpty
               />
 
-              {!isLoading && (
-                <UserCardGrid
-                  data={users}
-                  pageIndex={pageIndex}
-                  pageSize={search.limit}
-                  pageCount={pageCount}
-                  onPageChange={handlePageChange}
-                  onPageSizeChange={handlePageSizeChange}
-                  isLoading={isFetching}
-                  onCardClick={(user) =>
-                    navigate({
-                      to: '/users/$userId',
-                      params: { userId: user._id },
-                    })
-                  }
-                />
-              )}
-
-              {isLoading && (
-                <div className="px-4 text-xs text-muted-foreground lg:px-6">
-                  Loading users...
-                </div>
-              )}
+              <UserCardGrid
+                users={users}
+                total={total}
+                isInitialLoading={isPending}
+                isFetchingMore={isFetchingNextPage}
+                hasMore={hasNextPage ?? false}
+                onLoadMore={() => fetchNextPage()}
+                onCardClick={(user) =>
+                  navigate({
+                    to: '/users/$userId',
+                    params: { userId: user._id },
+                  })
+                }
+              />
             </div>
           </div>
         </div>

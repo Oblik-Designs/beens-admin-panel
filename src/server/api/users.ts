@@ -222,3 +222,90 @@ export const deleteUser = createServerFn({
 
   return result
 })
+
+// ─── Registration-recovery nudge + bulk actions (Engagement page) ────
+
+export interface NudgeResult {
+  userId: string
+  ok: boolean
+  sent: boolean
+  /** null when sent; otherwise why not (e.g. "cooldown"), or the error. */
+  skipped: string | null
+  error?: string
+}
+
+interface NudgeRegistrationResponse {
+  success: boolean
+  data: { sent: boolean; skipped: string | null }
+}
+
+/**
+ * Enqueue the "Continue registration" email for one or more INCOMPLETE
+ * accounts via `POST /admin/users/:id/nudge-registration`. Fans out per user
+ * so one failure never sinks the batch — each result is reported individually.
+ */
+export const nudgeRegistrationUsers = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const { userIds, reason } = (ctx.data ?? {}) as {
+    userIds: Array<string>
+    reason?: string
+  }
+  if (!userIds?.length) throw new Error('No users selected')
+
+  const results = await Promise.all(
+    userIds.map(async (id): Promise<NudgeResult> => {
+      try {
+        const r = await apiClient.post<NudgeRegistrationResponse>(
+          `/admin/users/${id}/nudge-registration`,
+          { dryRun: false, reason },
+        )
+        return {
+          userId: id,
+          ok: true,
+          sent: r.data?.sent ?? false,
+          skipped: r.data?.skipped ?? null,
+        }
+      } catch (e) {
+        return {
+          userId: id,
+          ok: false,
+          sent: false,
+          skipped: null,
+          error: e instanceof Error ? e.message : 'Failed',
+        }
+      }
+    }),
+  )
+  return { results }
+})
+
+export interface BulkDeleteResult {
+  userId: string
+  ok: boolean
+  error?: string
+}
+
+/** Disable (soft-delete) one or more accounts. SUPERADMIN-only on the API. */
+export const deleteUsers = createServerFn({
+  method: 'POST',
+}).handler(async (ctx) => {
+  const { userIds } = (ctx.data ?? {}) as { userIds: Array<string> }
+  if (!userIds?.length) throw new Error('No users selected')
+
+  const results = await Promise.all(
+    userIds.map(async (id): Promise<BulkDeleteResult> => {
+      try {
+        await apiClient.delete(`/user/${id}`)
+        return { userId: id, ok: true }
+      } catch (e) {
+        return {
+          userId: id,
+          ok: false,
+          error: e instanceof Error ? e.message : 'Failed',
+        }
+      }
+    }),
+  )
+  return { results }
+})

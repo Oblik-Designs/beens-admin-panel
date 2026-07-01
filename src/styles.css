@@ -227,3 +227,19 @@
   width: 100%;
   padding: 0 0.625rem 0.625rem;
 }
+
+.plan-card-elite {
+  border: 2px solid transparent;
+  background-image:
+    linear-gradient(var(--card), var(--card)),
+    var(--elite-shimmer),
+    var(--elite-gradient);
+  background-size: auto, 220% 100%, 100% 100%;
+  background-position: 0 0, -120% 0, 0 0;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  animation: elite-sweep var(--elite-sweep-duration) linear infinite;
+}
+
+.plan-card__media {
+  background: var(--muted);
+}

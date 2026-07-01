@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { format, formatDistanceToNow } from 'date-fns'
 import {
+    ActivityIcon,
     AlertCircleIcon,
     BellIcon,
     CheckCircle2Icon,
@@ -31,6 +32,7 @@ import { auditActionLabel, isKnownAuditAction } from '@/lib/audit-labels'
 import { cn } from '@/lib/utils'
 import type {
     AdminAuditEntry,
+    TimelineActivityEvent,
     TimelineEvent,
     TimelineEventType,
     WebhookEventSummary,
@@ -62,6 +64,9 @@ const ICONS: Record<TimelineEventType, typeof WebhookIcon> = {
     user_status: FileTextIcon,
     application: ClockIcon,
     notification: BellIcon,
+    // Default for diagnostic rows; the row swaps in a check/alert icon
+    // keyed on `outcome` (see TimelineRow).
+    activity: ActivityIcon,
 }
 
 const KIND_LABEL: Record<TimelineEventType, string> = {
@@ -73,6 +78,7 @@ const KIND_LABEL: Record<TimelineEventType, string> = {
     user_status: 'User',
     application: 'Application',
     notification: 'Notification',
+    activity: 'Activity',
 }
 
 const ALL_KINDS: Array<TimelineEventType> = [
@@ -84,6 +90,7 @@ const ALL_KINDS: Array<TimelineEventType> = [
     'user_status',
     'application',
     'notification',
+    'activity',
 ]
 
 export function Timeline({
@@ -223,9 +230,33 @@ export function Timeline({
     )
 }
 
+/**
+ * Diagnostic `activity` rows carry their timestamp as `timestamp` (flat
+ * shape, no payload) whereas every other kind uses `at`.
+ */
+function eventTimestamp(event: TimelineEvent): string {
+    return event.kind === 'activity' ? event.timestamp : event.at
+}
+
 function TimelineRow({ event }: { event: TimelineEvent }) {
-    const Icon = ICONS[event.kind]
-    const at = new Date(event.at)
+    // Diagnostic rows pick their icon from the outcome so a FAILED signup /
+    // plan-create reads as an alert at a glance; everything else is keyed
+    // off the kind.
+    const Icon =
+        event.kind === 'activity'
+            ? event.outcome === 'FAILED'
+                ? AlertCircleIcon
+                : CheckCircle2Icon
+            : ICONS[event.kind]
+    const iconClass = cn(
+        'size-3.5 text-muted-foreground',
+        event.kind === 'activity' &&
+            (event.outcome === 'FAILED'
+                ? 'text-red-700'
+                : 'text-emerald-700'),
+    )
+    const timestamp = eventTimestamp(event)
+    const at = new Date(timestamp)
 
     const body = (
         <>
@@ -242,7 +273,7 @@ function TimelineRow({ event }: { event: TimelineEvent }) {
                 </div>
                 <time
                     className="shrink-0 text-[11px] text-muted-foreground"
-                    dateTime={event.at}
+                    dateTime={timestamp}
                     title={format(at, 'PPpp')}
                 >
                     {formatDistanceToNow(at, { addSuffix: true })}
@@ -261,7 +292,7 @@ function TimelineRow({ event }: { event: TimelineEvent }) {
                 className="absolute -left-[31px] flex size-6 items-center justify-center rounded-full border bg-background"
                 aria-hidden="true"
             >
-                <Icon className="size-3.5 text-muted-foreground" />
+                <Icon className={iconClass} />
             </span>
 
             <EventLink event={event}>{body}</EventLink>
@@ -365,6 +396,7 @@ function EventLink({
         case 'kyc':
         case 'user_status':
         case 'notification':
+        case 'activity':
             return <div>{children}</div>
     }
 }
@@ -432,7 +464,40 @@ function TimelineRowDetail({ event }: { event: TimelineEvent }) {
                     {event.payload.channel} · {event.payload.title}
                 </span>
             )
+        case 'activity':
+            return <ActivityDetail event={event} />
     }
+}
+
+function ActivityDetail({ event }: { event: TimelineActivityEvent }) {
+    const failed = event.outcome === 'FAILED'
+
+    return (
+        <span className="inline-flex flex-wrap items-baseline gap-x-2">
+            <span
+                className={cn(
+                    'text-[11px] font-medium',
+                    failed ? 'text-red-700' : 'text-emerald-700',
+                )}
+            >
+                {failed ? 'failed' : 'ok'}
+            </span>
+            <span className="text-muted-foreground">·</span>
+            <code className="font-mono text-[11px]">{event.route}</code>
+            <span className="text-muted-foreground">·</span>
+            <span className="text-[11px] tabular-nums">
+                status {event.status}
+            </span>
+            {event.reason && (
+                <>
+                    <span className="text-muted-foreground">·</span>
+                    <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px] text-red-700">
+                        {event.reason}
+                    </code>
+                </>
+            )}
+        </span>
+    )
 }
 
 function WebhookDetail({ event }: { event: WebhookEventSummary }) {
