@@ -8,6 +8,7 @@ import {
   CalendarClockIcon,
   LayoutDashboardIcon,
   TicketIcon,
+  TrendingDownIcon,
   TriangleAlertIcon,
   UsersIcon,
   WebhookIcon,
@@ -30,6 +31,11 @@ const navMain = [
     title: 'Dashboard',
     url: '/',
     icon: <LayoutDashboardIcon />,
+  },
+  {
+    title: 'Engagement',
+    url: '/engagement',
+    icon: <TrendingDownIcon />,
   },
   {
     title: 'Users',
