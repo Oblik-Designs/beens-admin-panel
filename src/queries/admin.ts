@@ -1,7 +1,13 @@
 import { queryOptions } from '@tanstack/react-query'
-import type { StatsRange, TransactionsMetric } from '@/server/api/admin'
+import type {
+  CohortWindow,
+  StatsRange,
+  TransactionsMetric,
+} from '@/server/api/admin'
 import {
+  getActivitySegments,
   getAdminStats,
+  getCohortFunnel,
   getEngagementFunnel,
   getPlansTimeseries,
   getTransactionsTimeseries,
@@ -20,6 +26,23 @@ export const getEngagementFunnelOptions = queryOptions({
     return await getEngagementFunnel()
   },
 })
+
+export const getActivitySegmentsOptions = queryOptions({
+  queryKey: ['admin', 'stats', 'segments'],
+  queryFn: async () => {
+    return await getActivitySegments()
+  },
+})
+
+export const cohortFunnelOptions = (window: CohortWindow = '30') =>
+  queryOptions({
+    queryKey: ['admin', 'stats', 'cohorts', window],
+    queryFn: async () => {
+      const data = { window }
+      // @ts-expect-error - createServerFn types don't properly reflect data parameter
+      return await getCohortFunnel({ data })
+    },
+  })
 
 export const plansTimeseriesOptions = (range: StatsRange) =>
   queryOptions({

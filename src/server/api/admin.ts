@@ -71,6 +71,75 @@ export const getEngagementFunnel = createServerFn({
   return await apiClient.get<EngagementFunnelResponse>('/admin/stats/funnel')
 })
 
+// ── Activity segments (Phase 4) ─────────────────────────────────────
+// Mutually-exclusive last-login recency buckets from
+// `GET /admin/stats/segments` — the retention lens. The measured buckets
+// sum to `total`; `daily` ("very active") is null until per-day login
+// history is instrumented (Phase 6).
+export interface ActivitySegmentsData {
+  total: number
+  daily: number | null
+  weekly: number
+  monthly: number
+  dormant: number
+  churned: number
+  neverLoggedIn: number
+}
+
+export interface ActivitySegmentsResponse {
+  success: boolean
+  data: ActivitySegmentsData
+}
+
+export const getActivitySegments = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  return await apiClient.get<ActivitySegmentsResponse>('/admin/stats/segments')
+})
+
+// ── Cohort funnel (Phase 5) ─────────────────────────────────────────
+// Signup-week cohorts with the share of each that reached a funnel stage
+// *within N days of signup* — the age-controlled drop-off diagnostic
+// (§7 view 2). `complete` flags cohorts that have had the full window to
+// mature; younger cohorts are still in progress.
+export type CohortWindow = '7' | '14' | '30'
+
+export interface CohortFunnelParams {
+  window?: CohortWindow
+  weeks?: number
+}
+
+export interface CohortFunnelCohort {
+  cohortWeek: string
+  created: number
+  activated: number
+  initiating: number
+  connecting: number
+  complete: boolean
+}
+
+export interface CohortFunnelResponse {
+  success: boolean
+  data: {
+    windowDays: number
+    weeks: number
+    cohorts: Array<CohortFunnelCohort>
+  }
+}
+
+export const getCohortFunnel = createServerFn({
+  method: 'GET',
+}).handler(async (ctx) => {
+  const params = (ctx.data ?? {}) as CohortFunnelParams
+  const search = new URLSearchParams()
+  if (params.window) search.set('window', params.window)
+  if (params.weeks) search.set('weeks', String(params.weeks))
+  const qs = search.toString()
+  return await apiClient.get<CohortFunnelResponse>(
+    `/admin/stats/cohorts${qs ? `?${qs}` : ''}`,
+  )
+})
+
 export type StatsRange = '7d' | '30d' | '3m'
 
 export interface PlansTimeseriesParams {
