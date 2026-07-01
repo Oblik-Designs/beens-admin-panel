@@ -40,8 +40,8 @@ export function LifecycleFunnel({ stages, total }: LifecycleFunnelProps) {
         <CardTitle>Lifecycle Funnel</CardTitle>
         <CardDescription>
           Where accounts drop off on the way to being retained. Created →
-          Activated is live; deeper stages arrive as instrumentation lands
-          (Phases 2–3).
+          Activated → Initiating → Connecting → Retained are live; Exploring
+          (profile views) arrives with instrumentation in a later phase.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -52,13 +52,19 @@ export function LifecycleFunnel({ stages, total }: LifecycleFunnelProps) {
               ? 0
               : Math.max(2, Math.round((stage.count! / total) * 100))
 
-          // Drop-off from the previous stage, only when both are measured.
-          const prev = stages[i - 1]
-          const showDrop =
-            prev != null && prev.count !== null && stage.count !== null
-          const dropped = showDrop ? prev.count! - stage.count! : 0
-          const dropPct =
-            showDrop && prev.count! > 0 ? dropped / prev.count! : 0
+          // Drop-off from the nearest *measured* previous stage — so an
+          // unmeasured stage in the middle (e.g. Exploring) doesn't hide the
+          // arrow that spans it. Only rendered when both ends are measured.
+          let prev: FunnelStage | undefined
+          for (let j = i - 1; j >= 0; j--) {
+            if (stages[j].count !== null) {
+              prev = stages[j]
+              break
+            }
+          }
+          const showDrop = prev != null && stage.count !== null
+          const dropped = showDrop ? prev!.count! - stage.count! : 0
+          const dropPct = showDrop && prev!.count! > 0 ? dropped / prev!.count! : 0
 
           return (
             <div key={stage.key}>

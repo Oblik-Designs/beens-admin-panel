@@ -86,24 +86,57 @@ export interface FunnelStage {
   description: string
   /** null = not yet instrumented (a later phase fills this in). */
   count: number | null
-  /** Conversion from the previous stage, in [0, 1]; null when unknown. */
+  /** Share of all created accounts, in [0, 1]; null when the stage is unknown. */
   conversionFromPrev: number | null
 }
 
 /**
- * The full lifecycle funnel (§2). Phase 1 populates Created + Activated from
- * real data; deeper stages are `null` placeholders until their backend
- * aggregates exist.
+ * Behavioural stage counts from `GET /admin/stats/funnel` (Phase 3). Every
+ * field is a distinct-user count except `exploring`, which is null until
+ * profile views are instrumented (Phase 6).
+ */
+export interface FunnelBehavior {
+  exploring: number | null
+  initiating: number
+  connecting: number
+  retained7d: number
+  retained30d: number
+}
+
+/** Share of created accounts, in [0, 1]; null when count/total is unknown. */
+const shareOfCreated = (
+  count: number | null,
+  total: number,
+): number | null => {
+  if (count === null) return null
+  return total === 0 ? 0 : count / total
+}
+
+/**
+ * The full lifecycle funnel (§2).
+ *
+ * - Created + Activated come from the account-status snapshot (Phase 1).
+ * - Initiating / Connecting / Retained are filled from `behavior` when the
+ *   Phase 3 funnel endpoint has responded; otherwise they stay `null`
+ *   ("awaiting instrumentation").
+ * - Exploring stays `null` until profile views are persisted (Phase 6).
  */
 export function buildFunnelStages(
   snapshot: ActivationSnapshot,
+  behavior?: FunnelBehavior | null,
 ): Array<FunnelStage> {
+  const total = snapshot.totalUsers
+  const exploring = behavior?.exploring ?? null
+  const initiating = behavior?.initiating ?? null
+  const connecting = behavior?.connecting ?? null
+  const retained = behavior?.retained7d ?? null
+
   return [
     {
       key: 'created',
       label: 'Created',
       description: 'Accounts that exist',
-      count: snapshot.totalUsers,
+      count: total,
       conversionFromPrev: null,
     },
     {
@@ -116,30 +149,30 @@ export function buildFunnelStages(
     {
       key: 'exploring',
       label: 'Exploring',
-      description: 'Viewed another profile — Phase 2',
-      count: null,
-      conversionFromPrev: null,
+      description: 'Viewed another profile — awaiting instrumentation',
+      count: exploring,
+      conversionFromPrev: shareOfCreated(exploring, total),
     },
     {
       key: 'initiating',
       label: 'Initiating',
-      description: 'Sent a DM request or plan application — Phase 2',
-      count: null,
-      conversionFromPrev: null,
+      description: 'Sent a DM request or plan application',
+      count: initiating,
+      conversionFromPrev: shareOfCreated(initiating, total),
     },
     {
       key: 'connecting',
       label: 'Connecting',
-      description: 'Got a reply or a plan accepted — Phase 2',
-      count: null,
-      conversionFromPrev: null,
+      description: 'Got a reply or a plan accepted',
+      count: connecting,
+      conversionFromPrev: shareOfCreated(connecting, total),
     },
     {
       key: 'retained',
       label: 'Retained',
-      description: 'Came back (7d / 30d) — Phase 3',
-      count: null,
-      conversionFromPrev: null,
+      description: 'Connected and active in the last 7 days',
+      count: retained,
+      conversionFromPrev: shareOfCreated(retained, total),
     },
   ]
 }
