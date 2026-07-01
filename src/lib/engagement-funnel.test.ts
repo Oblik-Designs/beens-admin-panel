@@ -49,7 +49,7 @@ describe('buildStatusBreakdown', () => {
 })
 
 describe('buildFunnelStages', () => {
-  it('fills Created/Activated and leaves deeper stages pending', () => {
+  it('fills Created/Activated and leaves deeper stages pending without behavior', () => {
     const stages = buildFunnelStages(
       deriveActivation({ INCOMPLETE: 20, ACTIVE: 80 }),
     )
@@ -61,6 +61,33 @@ describe('buildFunnelStages', () => {
     // Deeper stages are explicitly null so the UI can show "awaiting
     // instrumentation" instead of a fake zero.
     expect(byKey.exploring.count).toBeNull()
+    expect(byKey.initiating.count).toBeNull()
     expect(byKey.retained.count).toBeNull()
+  })
+
+  // Phase 3 — the behavioural endpoint fills Initiating/Connecting/Retained.
+  it('fills behavioural stages from the funnel endpoint as share-of-created', () => {
+    const stages = buildFunnelStages(
+      deriveActivation({ INCOMPLETE: 20, ACTIVE: 80 }),
+      {
+        exploring: null,
+        initiating: 40,
+        connecting: 25,
+        retained7d: 10,
+        retained30d: 18,
+      },
+    )
+    const byKey = Object.fromEntries(stages.map((s) => [s.key, s]))
+
+    expect(byKey.initiating.count).toBe(40)
+    expect(byKey.initiating.conversionFromPrev).toBeCloseTo(0.4)
+    expect(byKey.connecting.count).toBe(25)
+    expect(byKey.connecting.conversionFromPrev).toBeCloseTo(0.25)
+    // Retained shows the 7-day figure against the created base.
+    expect(byKey.retained.count).toBe(10)
+    expect(byKey.retained.conversionFromPrev).toBeCloseTo(0.1)
+    // Exploring stays pending — profile views aren't persisted yet.
+    expect(byKey.exploring.count).toBeNull()
+    expect(byKey.exploring.conversionFromPrev).toBeNull()
   })
 })

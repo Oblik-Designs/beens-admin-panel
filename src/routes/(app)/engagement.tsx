@@ -9,7 +9,10 @@ import { LifecycleFunnel } from '@/components/engagement/lifecycle-funnel'
 import { AccountStatusBreakdown } from '@/components/engagement/account-status-breakdown'
 import { NeverActivatedTable } from '@/components/engagement/never-activated-table'
 import { getProfileOptions } from '@/queries/users'
-import { getAdminStatsOptions } from '@/queries/admin'
+import {
+  getAdminStatsOptions,
+  getEngagementFunnelOptions,
+} from '@/queries/admin'
 import {
   buildFunnelStages,
   buildStatusBreakdown,
@@ -25,18 +28,21 @@ export const Route = createFileRoute('/(app)/engagement')({
     // the route — same resilience pattern as the Dashboard.
     await context.queryClient.ensureQueryData(getProfileOptions)
     void context.queryClient.prefetchQuery(getAdminStatsOptions)
+    void context.queryClient.prefetchQuery(getEngagementFunnelOptions)
   },
   component: EngagementPage,
 })
 
 function EngagementPage() {
   const { data: statsResponse } = useQuery(getAdminStatsOptions)
+  const { data: funnelResponse } = useQuery(getEngagementFunnelOptions)
   const users = statsResponse?.data?.users ?? {}
+  const behavior = funnelResponse?.data ?? null
 
   const activation = React.useMemo(() => deriveActivation(users), [users])
   const stages = React.useMemo(
-    () => buildFunnelStages(activation),
-    [activation],
+    () => buildFunnelStages(activation, behavior),
+    [activation, behavior],
   )
   const statusBreakdown = React.useMemo(
     () => buildStatusBreakdown(users),

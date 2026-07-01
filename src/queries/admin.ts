@@ -2,6 +2,7 @@ import { queryOptions } from '@tanstack/react-query'
 import type { StatsRange, TransactionsMetric } from '@/server/api/admin'
 import {
   getAdminStats,
+  getEngagementFunnel,
   getPlansTimeseries,
   getTransactionsTimeseries,
 } from '@/server/api/admin'
@@ -10,6 +11,13 @@ export const getAdminStatsOptions = queryOptions({
   queryKey: ['admin', 'stats'],
   queryFn: async () => {
     return await getAdminStats()
+  },
+})
+
+export const getEngagementFunnelOptions = queryOptions({
+  queryKey: ['admin', 'stats', 'funnel'],
+  queryFn: async () => {
+    return await getEngagementFunnel()
   },
 })
 

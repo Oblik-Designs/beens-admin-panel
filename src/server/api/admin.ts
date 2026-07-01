@@ -47,6 +47,30 @@ export const getAdminStats = createServerFn({
   return await apiClient.get<AdminStatsResponse>('/admin/stats')
 })
 
+// ── Engagement funnel (Phase 3) ─────────────────────────────────────
+// Behavioural stage counts backfilled by `GET /admin/stats/funnel`.
+// Created/Activated are derived client-side from `/admin/stats`; this
+// endpoint fills the deeper arrows. `exploring` is null until profile
+// views are instrumented (Phase 6).
+export interface EngagementFunnelData {
+  exploring: number | null
+  initiating: number
+  connecting: number
+  retained7d: number
+  retained30d: number
+}
+
+export interface EngagementFunnelResponse {
+  success: boolean
+  data: EngagementFunnelData
+}
+
+export const getEngagementFunnel = createServerFn({
+  method: 'GET',
+}).handler(async () => {
+  return await apiClient.get<EngagementFunnelResponse>('/admin/stats/funnel')
+})
+
 export type StatsRange = '7d' | '30d' | '3m'
 
 export interface PlansTimeseriesParams {
