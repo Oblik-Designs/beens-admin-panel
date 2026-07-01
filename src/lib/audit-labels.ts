@@ -14,54 +14,57 @@
  */
 
 const AUDIT_ACTION_LABELS: Record<string, string> = {
-    // ── Phase 2 retrofit ─────────────────────────────────────────────
-    "user.ban": "Ban user",
-    "user.unban": "Unban user",
-    "user.update_role": "Change user role",
-    "plan.suspend": "Suspend plan",
-    "plan.unsuspend": "Unsuspend plan",
-    "plan.suspend_and_refund": "Suspend & refund plan",
-    "plan.set_status": "Set plan status",
-    "plan.set_schedule": "Update plan schedule",
-    "plan.mark_participant": "Mark participant",
-    "plan.issue_start_code": "Issue start code",
-    "plan.issue_end_code": "Issue end code",
-    "plan.resend_start_code": "Resend start code",
-    "plan.resend_end_code": "Resend end code",
+  // ── Phase 2 retrofit ─────────────────────────────────────────────
+  'user.ban': 'Ban user',
+  'user.unban': 'Unban user',
+  'user.update_role': 'Change user role',
+  'plan.suspend': 'Suspend plan',
+  'plan.unsuspend': 'Unsuspend plan',
+  'plan.suspend_and_refund': 'Suspend & refund plan',
+  'plan.set_status': 'Set plan status',
+  'plan.set_schedule': 'Update plan schedule',
+  'plan.mark_participant': 'Mark participant',
+  'plan.issue_start_code': 'Issue start code',
+  'plan.issue_end_code': 'Issue end code',
+  'plan.resend_start_code': 'Resend start code',
+  'plan.resend_end_code': 'Resend end code',
 
-    // ── Phase 2 retrofit (legacy snake_case duplicates) ──────────────
-    account_banned: "Ban user",
-    account_unbanned: "Unban user",
-    role_changed: "Change user role",
-    plan_suspended: "Suspend plan",
-    plan_unsuspended: "Unsuspend plan",
-    plan_suspended_and_refunded: "Suspend & refund plan",
-    plan_status_updated: "Set plan status",
+  // ── Phase 2 retrofit (legacy snake_case duplicates) ──────────────
+  account_banned: 'Ban user',
+  account_unbanned: 'Unban user',
+  role_changed: 'Change user role',
+  plan_suspended: 'Suspend plan',
+  plan_unsuspended: 'Unsuspend plan',
+  plan_suspended_and_refunded: 'Suspend & refund plan',
+  plan_status_updated: 'Set plan status',
 
-    // ── Phase 5a — webhook replay + transaction reconcile ────────────
-    "webhook.replay": "Replay webhook event",
-    "transaction.reconcile": "Reconcile transaction (Xendit)",
+  // ── Phase 5a — webhook replay + transaction reconcile ────────────
+  'webhook.replay': 'Replay webhook event',
+  'transaction.reconcile': 'Reconcile transaction (Xendit)',
 
-    // ── Phase 5b — KYC actions ───────────────────────────────────────
-    "kyc.resync": "Re-pull KYC from Sumsub",
-    "kyc.allow_resubmit": "Allow KYC resubmit",
+  // ── Phase 5b — KYC actions ───────────────────────────────────────
+  'kyc.resync': 'Re-pull KYC from Sumsub',
+  'kyc.allow_resubmit': 'Allow KYC resubmit',
 
-    // ── Phase 5c — user account fixes ────────────────────────────────
-    "user.resend_otp": "Resend OTP",
-    "user.verify_contact": "Mark contact verified",
-    "user.unstick_incomplete": "Unstick INCOMPLETE signup",
+  // ── Phase 5c — user account fixes ────────────────────────────────
+  'user.resend_otp': 'Resend OTP',
+  'user.verify_contact': 'Mark contact verified',
+  'user.unstick_incomplete': 'Unstick INCOMPLETE signup',
 
-    // ── Phase 5d — plan participant fixes ────────────────────────────
-    "plan.reset_code_attempts": "Reset code attempts",
-    "plan.force_join": "Force-enrol paid user",
-};
+  // ── Phase 5d — plan participant fixes ────────────────────────────
+  'plan.reset_code_attempts': 'Reset code attempts',
+  'plan.force_join': 'Force-enrol paid user',
+
+  // ── Engagement — registration recovery ───────────────────────────
+  'user.nudge_registration': 'Nudge registration',
+}
 
 /** Render-time label for an audit action. Falls back to the raw key
  * (in monospace at the call site) so unknown actions remain visible. */
 export function auditActionLabel(action: string): string {
-    return AUDIT_ACTION_LABELS[action] ?? action;
+  return AUDIT_ACTION_LABELS[action] ?? action
 }
 
 export function isKnownAuditAction(action: string): boolean {
-    return action in AUDIT_ACTION_LABELS;
+  return action in AUDIT_ACTION_LABELS
 }
