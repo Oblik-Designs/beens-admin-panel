@@ -2,9 +2,11 @@ import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import type { UserSearchParams, UserUpdatePayload } from '@/server/api/users'
 import {
   deleteUser,
+  deleteUsers,
   getAdminUserById,
   getProfile,
   getUserById,
+  nudgeRegistrationUsers,
   searchUsers,
   updateUser,
 } from '@/server/api/users'
@@ -87,8 +89,8 @@ export const searchUsersInfiniteOptions = (
       const loaded = allPages.reduce(
         (sum, page) =>
           sum +
-          (((page.data as { users?: Array<unknown> } | undefined)?.users
-            ?.length) ?? 0),
+          ((page.data as { users?: Array<unknown> } | undefined)?.users
+            ?.length ?? 0),
         0,
       )
       if (total > 0 && loaded >= total) return undefined
@@ -122,5 +124,24 @@ export const deleteUserOptions = (id: string) => ({
   mutationFn: async (): Promise<DeleteUserResult> => {
     // @ts-expect-error - createServerFn types don't properly reflect data parameter
     return await deleteUser({ data: id })
+  },
+})
+
+export const nudgeRegistrationOptions = () => ({
+  mutationKey: ['users', 'nudge-registration'],
+  mutationFn: async (variables: {
+    userIds: Array<string>
+    reason?: string
+  }) => {
+    // @ts-expect-error - createServerFn types don't properly reflect data parameter
+    return await nudgeRegistrationUsers({ data: variables })
+  },
+})
+
+export const deleteUsersOptions = () => ({
+  mutationKey: ['users', 'delete-bulk'],
+  mutationFn: async (variables: { userIds: Array<string> }) => {
+    // @ts-expect-error - createServerFn types don't properly reflect data parameter
+    return await deleteUsers({ data: variables })
   },
 })
